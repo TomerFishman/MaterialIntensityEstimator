@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-chdir('C:\\Users\\Tomer\\Dropbox\\-the research\\2020 10 IIASA\\MI_project\\buildings_db')
+chdir('C:\\Users\\Tomer\\Dropbox\\-the research\\2020 10 IIASA\\MI_project\\git\\MaterialIntensityEstimator')
 
 dims_structure_import = pd.read_excel("dims_structure.xlsx", sheet_name="dims_structure")
 
@@ -51,12 +51,99 @@ sns.violinplot(x="concrete", y="const_short", hue="use_short", data=buildings_im
 sns.violinplot(x="const_short", y="concrete", hue="use_short", data=buildings_import, cut=0, linewidth=.5, scale="width", bw=.1, height=2, aspect=1)
 sns.catplot(x="const_short", y="concrete", hue="use_short", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.15, height=8, aspect=1.8)
 sns.catplot(x="use_short", y="concrete", hue="const_short", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.15, height=8, aspect=1.8)
+sns.catplot(x="use_short", y="concrete", row="const_short", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=6)
+
+sns.catplot(x="use_short", y="concrete", col="const_short", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
+sns.catplot(x="use_short", y="steel", col="const_short", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
+sns.catplot(x="use_short", y="wood", col="const_short", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
+sns.catplot(x="use_short", y="brick", col="const_short", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
 
 # bivariate distribution plots https://seaborn.pydata.org/tutorial/distributions.html#visualizing-bivariate-distributions
-sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="const_short", linewidth=.1, xlim=(0, 3500), ylim=(0, 500), marginal_ticks=False)
-sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="const_short", linewidth=.1, xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)), ylim=(0, 500))
-sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="const_short", linewidth=.1, xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)), ylim=(0, 300))
-sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="const_short", linewidth=.1, xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)), ylim=(0, round(max(buildings_import['brick']), ndigits=-2)))
+kdebw = .6
+scattersize = 120
+scatteralpha = .6
+sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['steel']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['wood']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+
+sns.jointplot(data=buildings_import, x="steel", y="brick", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['steel']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="steel", y="wood", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['steel']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['wood']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+
+sns.jointplot(data=buildings_import, x="wood", y="brick", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['wood']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+# without outlyiers
+sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, 500),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, 300),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="const_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+
+sns.jointplot(data=buildings_import, x="steel", y="brick", hue="const_short", linewidth=0, height=8,
+              xlim=(0, 500),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="steel", y="wood", hue="const_short", linewidth=0, height=8,
+              xlim=(0, 500),
+              ylim=(0, 300),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+
+sns.jointplot(data=buildings_import, x="wood", y="brick", hue="const_short", linewidth=0, height=8,
+              xlim=(0, 300),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+
+# use types, without outlyiers
+sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="use_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, 500),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="use_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, 300),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="use_short", linewidth=0, height=8,
+              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+
+sns.jointplot(data=buildings_import, x="steel", y="brick", hue="use_short", linewidth=0, height=8,
+              xlim=(0, 500),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+sns.jointplot(data=buildings_import, x="steel", y="wood", hue="use_short", linewidth=0, height=8,
+              xlim=(0, 500),
+              ylim=(0, 300),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+
+sns.jointplot(data=buildings_import, x="wood", y="brick", hue="use_short", linewidth=0, height=8,
+              xlim=(0, 300),
+              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+# TODO same visualization for the 5 SSP regions to check that none of the regions govern these results
 
 # set up the same multiindex as the other dataframes
 buildings_import.set_index(dims_names, inplace=True)
