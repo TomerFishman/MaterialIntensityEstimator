@@ -1,0 +1,51 @@
+{
+    "categorical": {
+        "Construction type": {
+            "colors": {
+                "RC": "#DADF9E",
+                "M": "#DA7C56",
+                "S": "#F0F000",
+                "T": "#8BE3AE",
+                "U": "#A6A6A6"
+            }
+        },
+        "Use type": {
+            "colors": {
+                "Informal": "#55FF00",
+                "Nonresidential": "#AA00FF",
+                "Res. multifamily": "#FF5500",
+                "Res. single family": "#FFAA00",
+                "Res. unspecified": "#FFFF00",
+                "unspecified": "#989898"
+            }
+        },
+        "Region": {
+            "rename": "",
+            "renamed_values": {},
+            "colors": {
+                "China": "#D70000",
+                "Indonesia": "#FF0000",
+                "India": "#FF8B8D",
+                "Other Asia (L)": "#A80002",
+                "Other Asia (M)": "#CF6E6F",
+                "Taiwan": "#FF3D5A",
+                "Brazil": "#68F173",
+                "LATAM (M)": "#00AA7F",
+                "ME (H)": "#FFFF00",
+                "ME (M)": "#EFEF00",
+                "South Africa": "#DCC304",
+                "Subsaharan (L)": "#FDDF32",
+                "Australia & NZ": "#0055FF",
+                "Canada": "#BCB7FF",
+                "EFTA": "#0000FF",
+                "EU12 (H)": "#55AAFF",
+                "EU15": "#A9D7FF",
+                "Japan": "#4400CE",
+                "S. Korea": "#0774D8",
+                "Turkey": "#C6CEFF",
+                "USA": "#3D53CF"
+            }
+        }
+    },
+    "numeric": {}
+}
