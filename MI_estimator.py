@@ -5,7 +5,7 @@ Created on Thu Dec 10 13:42:14 2020
 @author: Tomer Fishman
 """
 # %% libraries and load dimensions
-# import numpy as np
+
 from os import chdir
 import pandas as pd
 import seaborn as sns
@@ -30,12 +30,13 @@ for dim_x in dims_names:
     # calculate the number of entities in the dimension
     dim_lastvalidrow = dims_structure_import[dim_x].last_valid_index() + 1
     dims_list += [list(dims_structure_import[dim_x][2:dim_lastvalidrow])]
-    # dims_len.append(len(dims_structure_import[dim_x][2:dim_lastvalidrow]))
 
 # HINT removed IN 'informal' because there are simply not enough datapoints for meaningful estimations, consider including later
 dims_list[0] = dims_list[0][1:]
 
 # %% load the MI database with const. type ML results from Orange
+
+materials = ['concrete', 'steel', 'wood', 'brick']
 
 buildings_import = pd.read_excel("data_input_and_ml_processing\\buildings_v2-const_type_ML.xlsx", sheet_name="Sheet1")
 
@@ -43,18 +44,12 @@ buildings_import = pd.read_excel("data_input_and_ml_processing\\buildings_v2-con
 buildings_import['const_short'] = buildings_import['Random Forest'].where((buildings_import['Construction type'].str.match('U')), buildings_import['Construction type'])
 
 # clean up buildings_import
-buildings_import = buildings_import[['id', 'concrete', 'steel', 'wood', 'brick', 'R5_32', 'use_short', 'const_short']]
+buildings_import = buildings_import[['id'] + materials + dims_names]
 
-# optional stuff and usage examples
 # # SSP 5 regions
 # buildings_import['R5'] = buildings_import['R5_32'].str.split('_').str[0]
 
-# # slice and selection examples. See also https://stackoverflow.com/questions/53927460/select-rows-in-pandas-multiindex-dataframe
-# buildings_import.loc[(buildings_import['R5_32'].str.match('OECD_JPN')), ('id', 'steel', 'R5_32')]
-# buildings_import.loc[(buildings_import['R5_32'].str.match('OECD_JPN')) & (buildings_import['use_short'].str.match('RM')), ('id', 'steel', 'R5_32', 'use_short')]
-# buildings_import.query("R5_32 == 'OECD_JPN' and use_short == 'RM'")
-
-# %% database plots
+# %% EDA: database plots
 
 
 # violin plots https://seaborn.pydata.org/generated/seaborn.violinplot.html
@@ -222,7 +217,7 @@ sns.jointplot(data=buildings_import, x="wood", y="brick", hue="R5", linewidth=0,
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
 
-# %% Kolmogorov-Smirnov Tests
+# %% EDA: Kolmogorov-Smirnov Tests
 
 group_a = buildings_import.loc[(buildings_import['use_short'].str.match('RM')) & (buildings_import['const_short'].str.match('C')) & (buildings_import['R5_32'].str.match('OECD_JPN')), ('steel')]
 group_b = buildings_import.loc[(buildings_import['use_short'].str.match('RS')) & (buildings_import['const_short'].str.match('T')) & (buildings_import['R5_32'].str.match('OECD_JPN')), ('steel')]
@@ -311,109 +306,49 @@ pairwise_kw_p_clean.to_excel("db_analysis\\kw_p.xlsx", merge_cells=False)
 
 # %% final setups of the database data
 
+# HINT remove IN 'informal' because there are simply not enough datapoints for meaningful estimations, consider including later
+buildings_import = buildings_import[buildings_import.use_short != 'IN']
 # set up the same multiindex as the other dataframes
 buildings_import.set_index(dims_names, inplace=True)
-
-# optional stuff and usage examples
-# # note the previous .loc slice and selection examples don't work now. Use query (or xs from the link)
-# buildings_import.query("R5_32 == 'OECD_JPN' and use_short == 'RM'")[['id', 'steel']]
-
-# # for sandbox: export to excel for toy model
-# buildings_import.reset_index().to_excel("MI_results\\buildings_db_processed.xlsx", sheet_name="sheet1")
-
-# %% create a new dataframe of the counts of unique combinations that exist in the DB
-# including unspecifieds
-db_combinations = pd.DataFrame(data=None, index=pd.MultiIndex.from_product(dims_list, names=dims_names))
-
-# add columns of counts in the db for each material
-db_combinations['concrete_count'] = buildings_import.groupby(dims_names).concrete.count()
-db_combinations['steel_count'] = buildings_import.groupby(dims_names).steel.count()
-db_combinations['wood_count'] = buildings_import.groupby(dims_names).wood.count()
-db_combinations['brick_count'] = buildings_import.groupby(dims_names).brick.count()
-
-# add columns of means and SDs in the db for each mmterial
-# db_combinations['concrete_mean'] = buildings_import.groupby(dims_names).concrete.mean()
-# db_combinations['concrete_sd'] = buildings_import.groupby(dims_names).concrete.std()
-# db_combinations['steel_mean'] = buildings_import.groupby(dims_names).steel.mean()
-# db_combinations['steel_std'] = buildings_import.groupby(dims_names).steel.std()
-# db_combinations['wood_mean'] = buildings_import.groupby(dims_names).wood.mean()
-# db_combinations['wood_std'] = buildings_import.groupby(dims_names).wood.std()
-# db_combinations['brick_mean'] = buildings_import.groupby(dims_names).brick.mean()
-# db_combinations['brick_std'] = buildings_import.groupby(dims_names).brick.std()
-
-# replace NANs with zeros for consistency, or keep only those with values
-db_combinations_valid = db_combinations.dropna()
-# db_combinations = db_combinations.fillna(0)
-
-# optional stuff and usage examples
-# # slice db_combinations that are unspecified in either use or const (should be equivalent to db_combinations.query("use_short == 'UN' or use_short == 'RU') because const_short == 'U' should not exist
-# db_combinations.query("use_short == 'UN' or use_short == 'RU' or const_short == 'U'")
-# # slice db_combinations that are NOT unspecified in either use or const
-# db_combinations.query("use_short != 'UN' and use_short != 'RU' and const_short != 'U'")
-
-# # exoort db_combinations
-# db_combinations.to_excel("MI_results\\db_combinations.xlsx", sheet_name="sheet1")
-# db_combinations.unstack().to_clipboard()
-
-# %% separate buildings_import to individual dataframes by valid combinations
-
 # sort to make pandas faster and with less warnings
 buildings_import = buildings_import.sort_index()
 
+
+# %% create a new dataframe of the counts of unique combinations that exist in the DB
+# including unspecifieds
+
+db_combinations_stats = [pd.DataFrame(data=None, index=pd.MultiIndex.from_product(dims_list, names=dims_names)),
+                         buildings_import.groupby(dims_names).count()[materials], buildings_import.groupby(dims_names).mean()[materials],
+                         buildings_import.groupby(dims_names).std()[materials], buildings_import.groupby(dims_names).quantile(q=0.05)[materials],
+                         buildings_import.groupby(dims_names).quantile(q=0.25)[materials], buildings_import.groupby(dims_names).quantile(q=0.50)[materials],
+                         buildings_import.groupby(dims_names).quantile(q=0.75)[materials], buildings_import.groupby(dims_names).quantile(q=0.95)[materials]]
+# TODO decide which quantile interpolation is best i.e. what does excel do?
+
+db_combinations_stats = pd.concat(db_combinations_stats, axis=1, keys=['', 'count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95'])
+
+db_combinations_stats[('count', 'concrete')]
+db_combinations_stats.loc[('NR', 'C', 'ASIA_CHN'), ('count', 'concrete')]
+db_combinations_stats.loc[('NR', 'C', 'ASIA_CHN'), :]
+db_combinations_stats.loc[:, db_combinations_stats.columns.isin(['concrete'], level=1)]
+
+# replace NANs with zeros for consistency, or keep only those with values
+db_combinations_stats_valid = db_combinations_stats.dropna(how='all')
+# db_combinations_stats = db_combinations_stats.fillna(0)
+
+
+# # exoort db_combinations_stats
+# db_combinations_stats.to_excel("MI_results\\db_combinations_stats.xlsx", sheet_name="sheet1")
+# db_combinations_stats.unstack().to_clipboard()
+
+# %% separate buildings_import to individual dataframes by valid combinations
+
 # prefiltered as a list only with valid combinations (i.e. existing in buildings_import): [combination tuple, dataframe, [no. of rows in df, counts of each material], expansion score set to 0]
-# # of all materials
-# db_combinations_data = []
-# [db_combinations_data.append([row[0], buildings_import.loc[row[0]], list(buildings_import.loc[row[0]].count()), 0]) for row in db_combinations_valid.itertuples()]
 
-# of only steel
-db_combinations_steel = []
-[db_combinations_steel.append([row[0], buildings_import.loc[row[0]], int(db_combinations_valid.loc[row[0], 'steel_count']), 0]) for row in db_combinations_valid.itertuples() if db_combinations_valid.loc[row[0], 'steel_count'] > 0]
-# optional stuff and usage examples
-# # its size in memory is bigger than buildings_import
-# buildings_import.memory_usage(deep=True).sum()
-# db_mem = 0
-# for i in range(len(db_combinations_data)):
-#     db_mem += db_combinations_data[i][1].memory_usage(deep=True).sum()
+db_combinations_data = {}
+for current_material in materials:
+    db_combinations_data[current_material] = []
+    [db_combinations_data[current_material].append([row[0], buildings_import.loc[row[0]], int(db_combinations_stats_valid.loc[row[0], ('count', current_material)]), 0]) for row in db_combinations_stats_valid.itertuples() if db_combinations_stats_valid.loc[row[0], ('count', current_material)] > 0]
 
-# # find contents in this list
-# "ASIA" in db_combinations_data[0][0][2]
-# "ASIA_C" in db_combinations_data[0][0][2]
-# "ASIA_CB" in db_combinations_data[0][0][2]  # doesn't exist
-
-# # example of filtering
-# # filtered = [db_combinations_data[i] for i in range(len(db_combinations_data)) if "ASIA" in db_combinations_data[i][0][2]]
-# filtered = [v for i, v in enumerate(db_combinations_data) if "ASIA" in v[0][2]]
-# filtered = [v for i, v in enumerate(db_combinations_data) if ('RM' in v[0][0]) and ('C' in v[0][1]) and ('OECD' in v[0][2])]
-# # combine the filtered data into one dataframe
-# filtered_combined = pd.concat([v[1] for i, v in enumerate(filtered)])
-
-# # HINT  the timing of this list "filter" is dramatically faster than pandas options: 12 µs ± 280 ns vs filtering with pandas query (3.57 ms ± 251 µs with OECD, 1.78 ms ± 141 µs with exact region) or loc (190 µs ± 17 µs but with an exact region)
-
-# # as a dict - excellent for organization and filtering logic but can't have duplicate keys :-(
-# db_combinations_data = {}
-
-# # only with valid combinations (i.e. existing in buildings_import)
-# for row in db_combinations_valid.itertuples():
-#     db_combinations_data[row[0]] = buildings_import.loc[row[0]]
-
-# # with all possible (and relevant) combinations, much slower of course
-# for row in db_combinations.itertuples():
-#     if buildings_import.index.isin([row[0]]).any():
-#         db_combinations_data[row[0]] = buildings_import.loc[row[0]]
-#     else:
-#         db_combinations_data[row[0]] = pd.DataFrame(data=None)
-
-# # access a combination
-# current_combi = ('RM', 'C', 'OECD_EU15')
-# db_combinations_data[current_combi]
-
-# # example of filtering
-# filtered = {k: v for (k, v) in db_combinations_data.items() if 'ASIA' in k[2]}
-# filtered = {k: v for (k, v) in db_combinations_data.items() if ('RM' in k[0]) and ('C' in k[1]) and ('ASIA' in k[2])}
-# # and if the filter doesn't exist at all? return an empty dict
-# filtered = {k: v for (k, v) in db_combinations_data.items() if 'BLAH' in k[2]}
-# # combine the filtered data into one dataframe
-# filtered_combined = pd.concat([v for v in filtered.values()])
 
 # %% create a dataframe with all practical (i.e. not unspecifieds) combination options to be filled with data
 
@@ -422,286 +357,483 @@ dims_list_specified = dims_list[:]
 dims_list_specified[0] = [x for x in dims_list_specified[0] if 'U' not in x]
 dims_list_specified[1] = [x for x in dims_list_specified[1] if 'U' not in x]
 
-# create multi index dataframe of all possible combinations. This will be the final output of this algorithm
-# mi_estimation = pd.DataFrame(data=None, index=pd.MultiIndex.from_product(dims_list_specified, names=dims_names), columns=['steel_db_count', 'wood_db_count', 'brick_db_count', 'concrete_db_count'])
-# # mi_estimation.memory_usage(deep=True).sum()
-
-# # add counts from db_combination_counts
-# mi_estimation['concrete_db_count'] = db_combinations['concrete_count']
-# mi_estimation['steel_db_count'] = db_combinations['steel_count']
-# mi_estimation['wood_db_count'] = db_combinations['wood_count']
-# mi_estimation['brick_db_count'] = db_combinations['brick_count']
 
 # dict for storing the current selection MIs with their IDs for backup and reference
-mi_estimation_steel_data = {}
-
-# only for steel
-mi_estimation_steel_stats = pd.DataFrame(data=None, index=pd.MultiIndex.from_product(dims_list_specified, names=dims_names),
-                                         columns=['R5', 'db_count', 'db_avg', 'db_sd', 'db_5', 'db_25', 'db_50', 'db_75', 'db_95',
-                                                  'expand_count', 'expand_avg', 'expand_sd', 'expand_5', 'expand_25', 'expand_50', 'expand_75', 'expand_95', 'expand_rounds'])  # , 'p1', 'p5', 'p10', 'p20', 'p25', 'p30', 'p40', 'p50', 'p60', 'p70', 'p75', 'p80', 'p90', 'p95', 'p99'
-mi_estimation_steel_stats = mi_estimation_steel_stats.reset_index()
-mi_estimation_steel_stats['R5'] = mi_estimation_steel_stats['R5_32'].str.split('_').str[0]  # SSP 5 regions
-mi_estimation_steel_stats = mi_estimation_steel_stats.set_index(['use_short', 'const_short', 'R5_32'])
-mi_estimation_steel_stats['db_count'] = db_combinations['steel_count']
-mi_estimation_steel_stats['db_avg'] = buildings_import.groupby(dims_names).steel.mean()
-mi_estimation_steel_stats['db_sd'] = buildings_import.groupby(dims_names).steel.std()
-mi_estimation_steel_stats['db_5'] = buildings_import.groupby(dims_names).steel.quantile(q=0.05)  # TODO decide which interpolation is best i.e. what does excel do
-mi_estimation_steel_stats['db_25'] = buildings_import.groupby(dims_names).steel.quantile(q=0.25)  # ), interpolation='nearest')
-mi_estimation_steel_stats['db_50'] = buildings_import.groupby(dims_names).steel.quantile(q=0.5)
-mi_estimation_steel_stats['db_75'] = buildings_import.groupby(dims_names).steel.quantile(q=0.75)
-mi_estimation_steel_stats['db_95'] = buildings_import.groupby(dims_names).steel.quantile(q=0.95)
+mi_estimation_data = {}
+mi_estimation_stats = {}
+for current_material in materials:
+    mi_estimation_data[current_material] = {}
+    mi_estimation_stats[current_material] = pd.DataFrame(data=None, index=pd.MultiIndex.from_product(dims_list_specified, names=dims_names),
+                                                         columns=['R5', 'db_count', 'db_avg', 'db_sd', 'db_5', 'db_25', 'db_50', 'db_75', 'db_95',
+                                                                  'expand_count', 'expand_avg', 'expand_sd', 'expand_5', 'expand_25', 'expand_50', 'expand_75', 'expand_95', 'expand_rounds'])  # , 'p1', 'p5', 'p10', 'p20', 'p25', 'p30', 'p40', 'p50', 'p60', 'p70', 'p75', 'p80', 'p90', 'p95', 'p99'
+    mi_estimation_stats[current_material] = mi_estimation_stats[current_material].reset_index()
+    mi_estimation_stats[current_material]['R5'] = mi_estimation_stats[current_material]['R5_32'].str.split('_').str[0]  # SSP 5 regions
+    mi_estimation_stats[current_material] = mi_estimation_stats[current_material].set_index(['use_short', 'const_short', 'R5_32'])
+    mi_estimation_stats[current_material]['db_count'] = db_combinations_stats[('count', current_material)]
+    mi_estimation_stats[current_material]['db_avg'] = db_combinations_stats[('avg', current_material)]
+    mi_estimation_stats[current_material]['db_sd'] = db_combinations_stats[('sd', current_material)]
+    mi_estimation_stats[current_material]['db_5'] = db_combinations_stats[('p5', current_material)]
+    mi_estimation_stats[current_material]['db_25'] = db_combinations_stats[('p25', current_material)]
+    mi_estimation_stats[current_material]['db_50'] = db_combinations_stats[('p50', current_material)]
+    mi_estimation_stats[current_material]['db_75'] = db_combinations_stats[('p75', current_material)]
+    mi_estimation_stats[current_material]['db_95'] = db_combinations_stats[('p95', current_material)]
 
 # %% selection algorithm
 
-stop_count = 10
+stop_count = 30
 
 
-def expand_selection(selection, count, condition):
-    newselection = [list(v) for v in db_combinations_steel if eval(condition)]
+def expand_selection(selection, count, condition, material):
+    newselection = [list(v) for v in db_combinations_data[material] if eval(condition)]
     if newselection:  # pythonic way to check if newselection is not empty
         selection += newselection
         count = 0
         for item in selection:
-            item[-1] += 1
-            count += item[2] * item[-1]
+            item[3] += 1  # counter for how many rounds this selection was in an expansion
+            count += item[2] * item[3]  # count how many datapoints are in selection
     return selection, count
 
 
 # HINT cosmetic: for simple tracking in the sandbox: sort by count of appearances in the db
-mi_estimation_steel_stats = mi_estimation_steel_stats.sort_values(by="db_count", ascending=False)
+for current_material in materials:
+    mi_estimation_stats[current_material] = mi_estimation_stats[current_material].sort_values(by="db_count", ascending=False)
 
-for current_index in mi_estimation_steel_stats.itertuples():  # running index for the current combination in mi_estimation
-    current_combi = current_index[0]  # the current combination, a tuple. if a list is needed use list(mi_estimation.index[0])
+    for current_index in mi_estimation_stats[current_material].itertuples():  # running index for the current combination in mi_estimation
+        current_combi = current_index[0]  # the current combination, a tuple. if a list is needed use list(mi_estimation.index[0])
 
-    current_selection = []
-    current_count = 0
+        current_selection = []
+        current_count = 0
 
-    # 1.1 add perfect matches
-    if current_count < stop_count:
-        current_condition = 'current_combi == v[0]'
-        current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-    # 1.2 add similar use types
-    if current_count < stop_count:
-        if current_combi[0] == 'NR':
-            current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"  # TODO this reselects the perfect combination! see RS T OECD_USA
-            current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-        else:  # i.e. if current_combi[0][0] == 'R':
-            current_condition = "('RU' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"  # TODO consider whether to first add UN (currently in the IF below) and only then RU?
-            current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-            if current_count < stop_count:  # TODO this adds UN. consider whether to add the opposite R type e.g. if we're at RS then add RM and vice versa
-                current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"
-                current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
+        # 1.1 add perfect matches
+        if current_count < stop_count:
+            current_condition = 'current_combi == v[0]'
+            current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+        # 1.2 add similar use types
+        if current_count < stop_count:
+            if current_combi[0] == 'NR':
+                current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"  # TODO this reselects the perfect combination! see RS T OECD_USA
+                current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+            else:  # i.e. if current_combi[0][0] == 'R':
+                current_condition = "('RU' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"  # TODO consider whether to first add UN (currently in the IF below) and only then RU?
+                current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+                if current_count < stop_count:  # TODO this adds UN. consider whether to add the opposite R type e.g. if we're at RS then add RM and vice versa
+                    current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"
+                    current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
 
-    # 2.1 repeat for bigger 5-level region, not including the current 32-level region
-    if current_count < stop_count:
-        current_condition = "(current_combi[0] == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] in v[0][2]) and (current_combi[2] != v[0][2])"
-        current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-    # 2.2 add similar use types
-    if current_count < stop_count:
-        if current_combi[0] == 'NR':
-            current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] in v[0][2]) and (current_combi[2] != v[0][2])"
-            current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-        else:  # make sure to keep it conformed to 1.2 TODO decisions!
-            current_condition = "('RU' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] in v[0][2]) and (current_combi[2] != v[0][2])"
-            current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-            if current_count < stop_count:
+        # 2.1 repeat for bigger 5-level region, not including the current 32-level region
+        if current_count < stop_count:
+            current_condition = "(current_combi[0] == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] in v[0][2]) and (current_combi[2] != v[0][2])"
+            current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+        # 2.2 add similar use types
+        if current_count < stop_count:
+            if current_combi[0] == 'NR':
                 current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] in v[0][2]) and (current_combi[2] != v[0][2])"
-                current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
+                current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+            else:  # make sure to keep it conformed to 1.2 TODO decisions!
+                current_condition = "('RU' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] in v[0][2]) and (current_combi[2] != v[0][2])"
+                current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+                if current_count < stop_count:
+                    current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] in v[0][2]) and (current_combi[2] != v[0][2])"
+                    current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
 
-    # 3.1 repeat for all regions
-    # TODO consider if stop_count or if stop_count-x to not expand to the entire world if we're already close to stop_count
-    if current_count < stop_count:
-        current_condition = "(current_combi[0] == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] not in v[0][2])"
-        current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-    # 3.2 add similar use types
-    if current_count < stop_count:
-        if current_combi[0] == 'NR':
-            current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] not in v[0][2])"
-            current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-        else:  # make sure to keep it conformed to 1.2 TODO decisions!
-            current_condition = "('RU' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] not in v[0][2])"
-            current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
-            if current_count < stop_count:
+        # 3.1 repeat for all regions
+        # TODO consider if stop_count or if stop_count-x to not expand to the entire world if we're already close to stop_count
+        if current_count < stop_count:
+            current_condition = "(current_combi[0] == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] not in v[0][2])"
+            current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+        # 3.2 add similar use types
+        if current_count < stop_count:
+            if current_combi[0] == 'NR':
                 current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] not in v[0][2])"
-                current_selection, current_count = expand_selection(current_selection, current_count, current_condition)
+                current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+            else:  # make sure to keep it conformed to 1.2 TODO decisions!
+                current_condition = "('RU' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] not in v[0][2])"
+                current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
+                if current_count < stop_count:
+                    current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2][:3] not in v[0][2])"
+                    current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
 
-    # When done: concatenate current_selection into one dataframe, including repetition of selections from previous expansion rounds i.e. v[3] in the second for loop
-    try:  # TODO temporary solution for empty combinations
-        current_selection_combined = pd.concat([v[1] for v in current_selection for i in range(v[3])], copy=True).loc[:, ['id', 'steel']].dropna()
-        # fill results into mi_estimation_stats 'expanded_count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95', 'expansion_rounds'
-        mi_estimation_steel_stats.loc[current_combi, 'expand_count'] = current_count
-        mi_estimation_steel_stats.loc[current_combi, 'expand_avg'] = current_selection_combined['steel'].mean()  # can also use iloc for generalization, a bit slower: current_selection_combined.iloc[:, 1].mean()
-        mi_estimation_steel_stats.loc[current_combi, 'expand_sd'] = current_selection_combined['steel'].std()
-        mi_estimation_steel_stats.loc[current_combi, 'expand_5'] = np.quantile(current_selection_combined['steel'], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
-        mi_estimation_steel_stats.loc[current_combi, 'expand_25'] = np.quantile(current_selection_combined['steel'], q=0.25)
-        mi_estimation_steel_stats.loc[current_combi, 'expand_50'] = np.quantile(current_selection_combined['steel'], q=0.50)
-        mi_estimation_steel_stats.loc[current_combi, 'expand_75'] = np.quantile(current_selection_combined['steel'], q=0.75)
-        mi_estimation_steel_stats.loc[current_combi, 'expand_95'] = np.quantile(current_selection_combined['steel'], q=0.95)
-        mi_estimation_steel_stats.loc[current_combi, 'expand_rounds'] = current_selection[0][3]
-    except ValueError:
-        current_selection_combined = pd.DataFrame()
+        # When done: concatenate current_selection into one dataframe, including repetition of selections from previous expansion rounds i.e. v[3] in the second for loop
+        try:  # TODO temporary solution for empty combinations
+            current_selection_combined = pd.concat([v[1] for v in current_selection for i in range(v[3])], copy=True).loc[:, ['id', current_material]].dropna()
+            current_selection_combined['expansion_round'] = current_selection_combined.groupby('id').cumcount()
+            current_selection_combined['expansion_round'] = current_selection_combined['expansion_round'].max() - current_selection_combined['expansion_round']
+            if current_combi not in current_selection_combined.index:
+                current_selection_combined['expansion_round'] += 1
+            # fill results into mi_estimation_stats 'expanded_count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95', 'expansion_rounds'
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_count'] = current_count
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_avg'] = current_selection_combined[current_material].mean()
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_sd'] = current_selection_combined[current_material].std()
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_rounds'] = current_selection[0][3]
+        except ValueError:
+            current_selection_combined = pd.DataFrame()
 
-    # save current_selection_combined for backup and reference
-    mi_estimation_steel_data[current_combi] = current_selection_combined.copy()
+        # save current_selection_combined for backup and reference
+        mi_estimation_data[current_material][current_combi] = current_selection_combined.copy()
 
-# HINT cosmetic: resort by index
-mi_estimation_steel_stats.sort_index(inplace=True)
+    # HINT cosmetic: resort by index
+    mi_estimation_stats[current_material].sort_index(inplace=True)
+    filename = current_material + '_stop_at_' + str(stop_count) + '_20200317'
+    mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(current_material + filename))
+
+# %% analysis: prepare the results
+
+# merge results data for boxplots, start with a list of dataframes and then concatenate it to one dataframe
+# structure should be: combination dict: use, const, r32, material, value
+# then we can do boxplots etc., one page for each region, each plot has the 4 materials
+
+analysis_comparison_data = {}
+for current_material in materials:
+    for key, value in mi_estimation_data[current_material].items():
+        analysis_comparison_data[key + (current_material,)] = mi_estimation_data[current_material][key]
+        analysis_comparison_data[key + (current_material,)] = analysis_comparison_data[key + (current_material,)].reset_index()
+        analysis_comparison_data[key + (current_material,)] = analysis_comparison_data[key + (current_material,)].drop(['id'] + dims_names, axis=1)
+        analysis_comparison_data[key + (current_material,)]['combination'] = str(key)
+analysis_comparison_data = pd.concat(analysis_comparison_data)
+analysis_comparison_data['value'] = analysis_comparison_data.sum(axis=1, numeric_only=True)
+analysis_comparison_data.index.rename(dims_names + ['material', 'id'], inplace=True)
+analysis_comparison_data.reset_index(inplace=True)
+analysis_comparison_data.drop(materials + ['id'], axis=1, inplace=True)
+analysis_comparison_data['R5'] = analysis_comparison_data['R5_32'].str.split('_').str[0]
+
+# %% analysis: boxplots
+
+sns.boxplot(data=analysis_comparison_data.loc[analysis_comparison_data['combination'] == "('RS', 'C', 'OECD_EU15')"], x='material', y='value')
+sns.catplot(data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == "OECD_EU15"], x='material', y='value', row='use_short', col='const_short', kind="violin")
+
+region = "OECD_EU15"
+boxes = sns.catplot(kind="box",
+                    data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
+                    hue='material', y='value',
+                    row='const_short', row_order=dims_list_specified[1],
+                    x='use_short', order=dims_list_specified[0],
+                    linewidth=0.8, showfliers=False,
+                    aspect=3, sharey=True, legend_out=False)
+boxes.set_titles(region + ", {row_name}")
+
+boxes = sns.catplot(kind="boxen",
+                    data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
+                    hue='material', y='value',
+                    row='const_short', row_order=dims_list_specified[1],
+                    x='use_short', order=dims_list_specified[0],
+                    linewidth=0.8, showfliers=False,
+                    aspect=3, sharey=True, legend_out=False, k_depth="proportion", outlier_prop=0.05)
+boxes.set_titles(region + ", {row_name}")
+
+sns.catplot(kind="box",
+            data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == "OECD_EU15"],
+            x='material', y='value',
+            row='use_short', row_order=dims_list_specified[0],
+            col='const_short', col_order=dims_list_specified[1],
+            linewidth=0.8, showfliers=False,
+            )
+
+with PdfPages('MI_results\\boxplots.pdf') as pdf:
+    for region in dims_list_specified[2]:
+        boxes = sns.catplot(kind="box",
+                            data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
+                            hue='material', y='value',
+                            row='const_short', row_order=dims_list_specified[1],
+                            x='use_short', order=dims_list_specified[0],
+                            linewidth=0.8, showfliers=False,
+                            aspect=3, legend_out=False)
+        boxes.set_titles(region + ", {row_name}")
+        pdf.savefig(boxes.fig)
+
+# %% analysis: before-after comparisons with violin plots
+
+# merge results data for seaborn
+analysis_comparisons = {}
+for current_material in materials:
+    analysis_comparisons[current_material] = {}
+    for row in mi_estimation_stats[current_material].itertuples():
+        if buildings_import.index.isin([row[0]]).any():
+            analysis_comparisons[current_material][row[0]] = buildings_import.loc[row[0], ['id', current_material]]
+        else:
+            analysis_comparisons[current_material][row[0]] = pd.DataFrame(data=None)
+        analysis_comparisons[current_material][row[0]] = analysis_comparisons[current_material][row[0]].assign(MIs="before")
+        analysis_comparisons[current_material][row[0]] = pd.concat([analysis_comparisons[current_material][row[0]], mi_estimation_data[current_material][row[0]].loc[:, ['id', current_material]]])
+        analysis_comparisons[current_material][row[0]]['MIs'] = analysis_comparisons[current_material][row[0]]['MIs'].fillna("after")
+        analysis_comparisons[current_material][row[0]].dropna(inplace=True)
+        analysis_comparisons[current_material][row[0]] = analysis_comparisons[current_material][row[0]].assign(combination=str(row[0]))
+        analysis_comparisons[current_material][row[0]] = analysis_comparisons[current_material][row[0]].assign(use=row[0][0])
+        analysis_comparisons[current_material][row[0]] = analysis_comparisons[current_material][row[0]].assign(construction=row[0][1])
+        analysis_comparisons[current_material][row[0]] = analysis_comparisons[current_material][row[0]].assign(region=row[0][2])
+
+# viol = sns.violinplot(y="combination", x=current_material, data=comparisons[current_material][('RS', 'C', 'OECD_EU15')], hue="MIs", hue_order=("after", "before"), split=True, inner="stick", scale="count", bw=0.1, linewidth=1)
+# viol.set_xlim(left=0, right=500)
+
+swar = sns.swarmplot(y="combination", x=current_material, data=analysis_comparisons[current_material][('RS', 'C', 'OECD_EU15')], hue="MIs", hue_order=("before", "after"))
+stri = sns.stripplot(y="combination", x=current_material, data=analysis_comparisons[current_material][('RS', 'C', 'OECD_EU15')], hue="MIs", hue_order=("before", "after"))
 
 
-# %% analysis
+def compareviolin_landscape(u, c, r, material, axx, axy):
+    violcombi = (u, c, r)
+    if material == 'steel':
+        outliercut = 200
+    elif material == 'wood':
+        outliercut = 350
+    else:
+        outliercut = buildings_import.max()[material]
+    viol = sns.violinplot(y="combination", x=material, data=analysis_comparisons[material][violcombi], hue="MIs", hue_order=("after", "before"), split=True,
+                          inner="quartile", scale="count", bw=.1, linewidth=1, ax=violins_axs[axx, axy])
+    viol.set_title(violcombi)
+    viol.set_xlim(left=0, right=outliercut)
+    viol.set_ylabel("")
+    viol.set_yticks([])
+    viol.legend([], [], frameon=False)
+    viol.annotate('After (n = ' + str(mi_estimation_stats[material].loc[violcombi, "expand_count"]) + ', ' + str(mi_estimation_stats[material].loc[violcombi, "expand_rounds"]) + ' expansions)\n'
+                  'p5 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_5"], 2)) + '\n'
+                  'p25 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_25"], 2)) + '\n'
+                  'median = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_50"], 2)) + '\n'
+                  'p75 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_75"], 2)) + '\n'
+                  'p95 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_95"], 2)),
+                  xy=(outliercut - 1, -0.49), va='top', ha='right', color='C0')
+    if outliercut < buildings_import.max()[material]:
+        viol.annotate('outliers > ' + str(outliercut) + ' = ' + str(analysis_comparisons[material][violcombi].query(material + ' > @outliercut and (MIs == "after")').count()[1]),
+                      xy=(outliercut - 1, -0.28), va='top', ha='right', color='C0')
+
+    if mi_estimation_stats[material].loc[violcombi, "db_count"] > 0:
+        viol.annotate('Before (n = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_count"])) + ')\n'
+                      'p5 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_25"], 2)) + '\n'
+                      'p25 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_25"], 2)) + '\n'
+                      'median = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_50"], 2)) + '\n'
+                      'q75 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_75"], 2)) + '\n'
+                      'q95 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_95"], 2)) + '\n',
+                      xy=(outliercut - 1, 0.49), va='bottom', ha='right', color='C1')
+        if outliercut < buildings_import.max()[material]:
+            viol.annotate('outliers > ' + str(outliercut) + ' = ' + str(analysis_comparisons[material][violcombi].query(material + ' > @outliercut and (MIs == "before")').count()[1]),
+                          xy=(outliercut - 1, 0.49), va='bottom', ha='right', color='C1')
+
+    else:
+        viol.annotate('Before (n = 0)', va='bottom', ha='right', color='C1', xy=(outliercut - 1, 0.49))
+    return viol
+
+
+for current_material in materials:
+    filename = current_material + '_stop_at_' + str(stop_count) + '_20200305'
+    with PdfPages('MI_results\\' + filename + '.pdf') as pdf:
+        for region in dims_list_specified[2]:
+            violins, violins_axs = plt.subplots(3, 4, figsize=(30, 20))
+            compareviolin_landscape('NR', 'C', region, current_material, 0, 0)
+            compareviolin_landscape('NR', 'M', region, current_material, 0, 1)
+            compareviolin_landscape('NR', 'S', region, current_material, 0, 2)
+            compareviolin_landscape('NR', 'T', region, current_material, 0, 3)
+            compareviolin_landscape('RM', 'C', region, current_material, 1, 0)
+            compareviolin_landscape('RM', 'M', region, current_material, 1, 1)
+            compareviolin_landscape('RM', 'S', region, current_material, 1, 2)
+            compareviolin_landscape('RM', 'T', region, current_material, 1, 3)
+            compareviolin_landscape('RS', 'C', region, current_material, 2, 0)
+            compareviolin_landscape('RS', 'M', region, current_material, 2, 1)
+            compareviolin_landscape('RS', 'S', region, current_material, 2, 2)
+            compareviolin_landscape('RS', 'T', region, current_material, 2, 3)
+            pdf.savefig(violins)
+
+
+# %% analysis: growth of distributions by expansion round, histograms
+
+growth = sns.histplot(data=analysis_growth[current_material][current_combi], x=current_material,
+                      hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],  # hue_order=["6", "5", "4", "3", "2", "1", "0"],
+                      palette="magma", alpha=1, linewidth=0,  # fill=False,
+                      stat="count", element="step",
+                      binwidth=75)
+growth.set_xlim(left=0, right=buildings_import.max()[current_material])
+
+current_combi = ('RS', 'T', 'ASIA_TWN')
+current_combi = ('RM', 'T', 'OECD_EU15')
+
+
+growth, growth_axes = plt.subplots(3, gridspec_kw={"height_ratios": (.1, .1, .8)})
+
+growth_data = mi_estimation_data[current_material][current_combi].copy().reset_index()
+growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
+sns.set_palette("magma", 7)
+sns.boxplot(data=growth_data, x=current_material,
+            linewidth=0.8, showfliers=False,
+            color="C" + growth_data['expansion_round'].max(),
+            ax=growth_axes[0])
+sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=current_material,
+            linewidth=0.8, showfliers=False,
+            color="C1",
+            ax=growth_axes[1])
+sns.histplot(data=growth_data, x=current_material,
+             hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
+             alpha=1, linewidth=0,
+             stat="count", element="step",
+             binwidth=20,
+             ax=growth_axes[2])
+growth_axes[0].set(yticks=[], xticks=[], xlim=(0, 700),
+                   xlabel='after, n=' + str(growth_data.count()[0]),
+                   title=str(current_combi)[1:-1])
+growth_axes[1].set(yticks=[], xticks=[], xlim=(0, 700),
+                   xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]))
+growth_axes[2].set(xlim=(0, 700), xlabel='kg/m2 \n')
+sns.despine(ax=growth_axes[0], left=True, bottom=True)
+sns.despine(ax=growth_axes[1], left=True, bottom=True)
+sns.despine(ax=growth_axes[2])
+
+
+def comparegrowth_hist(u, c, r, material, axx_before, axx_after, axx_hist, axy):
+    combi = (u, c, r)
+    if material == 'steel':
+        outliercut = 200
+        binsize = 15
+    elif material == 'wood':
+        outliercut = 350
+        binsize = 20
+    else:
+        outliercut = buildings_import.max()[material]
+        binsize = 75
+
+    growth_data = mi_estimation_data[material][combi].copy().reset_index()
+    growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
+
+    sns.set_palette("magma", 7)
+
+    sns.boxplot(data=growth_data, x=material,
+                linewidth=0.8, showfliers=False,
+                color="C" + growth_data['expansion_round'].max(),
+                ax=growth_axes[axx_after, axy])
+    sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=material,
+                linewidth=0.8, showfliers=False,
+                color=".6",
+                ax=growth_axes[axx_before, axy])
+    sns.histplot(data=growth_data, x=material,
+                 hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
+                 alpha=1, linewidth=0,
+                 stat="count", element="step",
+                 binwidth=binsize,
+                 ax=growth_axes[axx_hist, axy])
+
+    growth_axes[axx_after, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
+                                    xlabel='after, n=' + str(growth_data.count()[0]))
+    growth_axes[axx_before, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
+                                     xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]),
+                                     title="\n" + str(combi)[1:-1])
+    growth_axes[axx_hist, axy].set(xlim=(0, outliercut), xlabel='kg/m2 \n')
+
+    sns.despine(ax=growth_axes[axx_after, axy], left=True, bottom=True)
+    sns.despine(ax=growth_axes[axx_before, axy], left=True, bottom=True)
+    sns.despine(ax=growth_axes[axx_hist, axy])
+
+    if not(axx_hist == 2 and axy == 3):
+        growth_axes[axx_hist, axy].legend([], [], frameon=False)
+
+    return None
+
+
+for current_material in materials:
+    filename = current_material + '_stop_at_' + str(stop_count) + '_20200317'
+    with PdfPages('MI_results\\' + filename + '.pdf') as pdf:
+        for region in dims_list_specified[2]:
+            growth, growth_axes = plt.subplots(9, 4, gridspec_kw={"height_ratios": (.1, .1, .8, .1, .1, .8, .1, .1, .8)}, figsize=(30, 20))
+            comparegrowth_hist("NR", "C", region, current_material, 0, 1, 2, 0)
+            comparegrowth_hist("NR", "M", region, current_material, 0, 1, 2, 1)
+            comparegrowth_hist("NR", "S", region, current_material, 0, 1, 2, 2)
+            comparegrowth_hist("NR", "T", region, current_material, 0, 1, 2, 3)
+            comparegrowth_hist("RM", "C", region, current_material, 3, 4, 5, 0)
+            comparegrowth_hist("RM", "M", region, current_material, 3, 4, 5, 1)
+            comparegrowth_hist("RM", "S", region, current_material, 3, 4, 5, 2)
+            comparegrowth_hist("RM", "T", region, current_material, 3, 4, 5, 3)
+            comparegrowth_hist("RS", "C", region, current_material, 6, 7, 8, 0)
+            comparegrowth_hist("RS", "M", region, current_material, 6, 7, 8, 1)
+            comparegrowth_hist("RS", "S", region, current_material, 6, 7, 8, 2)
+            comparegrowth_hist("RS", "T", region, current_material, 6, 7, 8, 3)
+            growth.set_constrained_layout(True)
+            pdf.savefig(growth)
+
+# %% analysis: growth of distributions by expansion round, kde
+
+# merge results data for multiple combinations manually (similar to the violin plots)
+analysis_growth = {}
+for current_material in materials:
+    analysis_growth[current_material] = {}
+    for row in mi_estimation_stats[current_material].itertuples():
+        analysis_growth[current_material][row[0]] = pd.DataFrame(data=None)
+        analysis_growth[current_material][row[0]] = mi_estimation_data[current_material][row[0]].copy().reset_index()
+        # analysis_growth[current_material][row[0]].drop_duplicates(subset="id", keep="last", inplace=True)
+        analysis_growth[current_material][row[0]]['expansion_round'] = analysis_growth[current_material][row[0]]['expansion_round'].astype("string")
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(combination=str(row[0]))
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(use=row[0][0])
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(construction=row[0][1])
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(region=row[0][2])
+
+current_combi = ('RS', 'T', 'ASIA_TWN')
+growth = sns.kdeplot(data=analysis_growth[current_material][current_combi], x=current_material,
+                     hue="expansion_round", hue_order=["4", "3", "2", "1", "0"],
+                     linewidth=0, palette="magma",
+                     bw_adjust=.2, multiple="stack")
+growth.set_xlim(left=0, right=buildings_import.max()[current_material])
+
+
+def comparegrowth_kde(u, c, r, material, axx, axy):
+    combi = (u, c, r)
+    if material == 'steel':
+        outliercut = 200
+    elif material == 'wood':
+        outliercut = 350
+    else:
+        outliercut = buildings_import.max()[material]
+    growth = sns.kdeplot(data=analysis_growth[material][combi], x=material,
+                         hue="expansion_round", hue_order=["6", "5", "4", "3", "2", "1", "0"],
+                         linewidth=0, palette="magma",
+                         bw_adjust=.2, multiple="stack",
+                         warn_singular=False,
+                         ax=growths_axs[axx, axy])
+    growth.set_ylabel("")
+    growth.set_yticks([])
+    growth.set_title(combi)
+    growth.set_xlim(left=0, right=outliercut)
+    if not(axx == 0 and axy == 3):
+        growth.legend([], [], frameon=False)
+    return growth
+
+
+for current_material in materials:
+    filename = 'kde_growth_' + current_material + '_stop_at_' + str(stop_count) + '_20200317'
+    with PdfPages('MI_results\\' + filename + '.pdf') as pdf:
+        for region in dims_list_specified[2]:
+            growths, growths_axs = plt.subplots(3, 4, figsize=(30, 20))
+            comparegrowth_kde('NR', 'C', region, current_material, 0, 0)
+            comparegrowth_kde('NR', 'M', region, current_material, 0, 1)
+            comparegrowth_kde('NR', 'S', region, current_material, 0, 2)
+            comparegrowth_kde('NR', 'T', region, current_material, 0, 3)
+            comparegrowth_kde('RM', 'C', region, current_material, 1, 0)
+            comparegrowth_kde('RM', 'M', region, current_material, 1, 1)
+            comparegrowth_kde('RM', 'S', region, current_material, 1, 2)
+            comparegrowth_kde('RM', 'T', region, current_material, 1, 3)
+            comparegrowth_kde('RS', 'C', region, current_material, 2, 0)
+            comparegrowth_kde('RS', 'M', region, current_material, 2, 1)
+            comparegrowth_kde('RS', 'S', region, current_material, 2, 2)
+            comparegrowth_kde('RS', 'T', region, current_material, 2, 3)
+            pdf.savefig(growths)
+
+
+# %% further analysis
 
 # TODO list:
-# make it output a pdf with all violin plots
 # for the paper we'll select some examples of how the algorithm behaves with lots of perfect matches, the cse of 10-15, and the case of 0-1 datapoints
-# we should create a user interface that shows violin plots and percentiles before users download the data
+# maybe create a user interface that shows violin plots and percentiles before users download the data
 # TODO 24/2:
 # compare results with previous studies: marinova, heeren, etc.
 # consider adding glass aluminum copper, etc as in marinova, even though we won't get much between-region variation, it's still an improvement over marinova's simple avg.
 # maybe for these extra materials we don't need the regional differentiation, so we'd use a simplified algorithm on 5 ssp or just global but still differentiate use and const.
 
-mi_estimation_steel_stats.to_clipboard()
+current_material = 'steel'
+mi_estimation_stats[current_material].to_clipboard()
 
-mi_estimation_steel_stats['db_count'] = mi_estimation_steel_stats['db_count'].fillna(0)
-sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="use_short", data=mi_estimation_steel_stats)
-sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="const_short", data=mi_estimation_steel_stats)
-sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="R5", data=mi_estimation_steel_stats)
-sns.relplot(x="expand_count", y="db_count", hue="expand_rounds", data=mi_estimation_steel_stats)
-sns.relplot(x="expand_count", y="db_count", hue="R5", data=mi_estimation_steel_stats)
-sns.relplot(x="db_count", y="expand_count", hue="R5", size="expand_rounds", sizes=(10, 300), alpha=0.5, data=mi_estimation_steel_stats)
-sns.relplot(x="expand_rounds", y="db_count", hue="R5", size="expand_count", sizes=(1, 400), alpha=0.3, data=mi_estimation_steel_stats)
-sns.swarmplot(x="expand_rounds", y="expand_count", hue="R5", data=mi_estimation_steel_stats)
-
-
-# %% before-after comparisons
-
-comparisons = {}
-for row in mi_estimation_steel_stats.itertuples():
-    if buildings_import.index.isin([row[0]]).any():
-        comparisons[row[0]] = buildings_import.loc[row[0], ['id', 'steel']]
-    else:
-        comparisons[row[0]] = pd.DataFrame(data=None)
-    comparisons[row[0]] = comparisons[row[0]].assign(MIs="before")
-    comparisons[row[0]] = pd.concat([comparisons[row[0]], mi_estimation_steel_data[row[0]]])
-    comparisons[row[0]]['MIs'] = comparisons[row[0]]['MIs'].fillna("after")
-    comparisons[row[0]].dropna(inplace=True)
-    comparisons[row[0]] = comparisons[row[0]].assign(combination=str(row[0]))
-    comparisons[row[0]] = comparisons[row[0]].assign(use=row[0][0])
-    comparisons[row[0]] = comparisons[row[0]].assign(construction=row[0][1])
-    comparisons[row[0]] = comparisons[row[0]].assign(region=row[0][2])
-
-
-# viol = sns.violinplot(y="combination", x="steel", data=comparisons[('RS', 'C', 'OECD_EU15')], hue="MIs", hue_order=("after", "before"), split=True, inner="stick", scale="count", bw=0.1, linewidth=1)
-# viol.set_xlim(left=0, right=500)
-
-# swar = sns.swarmplot(y="combination", x="steel", data=comparisons[('RS', 'C', 'OECD_EU15')], hue="MIs", hue_order=("before", "after"))
-# stri = sns.stripplot(y="combination", x="steel", data=comparisons[('RS', 'C', 'OECD_EU15')], hue="MIs", hue_order=("before", "after"))
-
-# def compareviolin_portrait(u, c, r, axx, axy):
-#     yaxiscut = 200
-#     violcombi = (u, c, r)
-#     viol = sns.violinplot(x="combination", y="steel", data=comparisons[violcombi], hue="MIs", hue_order=("before", "after"), split=True,
-#                           inner="quartile", scale="count", cut=0, bw=.1, linewidth=1, ax=axs[axx, axy])
-#     viol.set_title(violcombi)
-#     viol.set_ylim(bottom=0, top=yaxiscut)
-#     viol.set_xlabel("")
-#     viol.set_xticks([])
-#     viol.legend([], [], frameon=False)
-#     viol.annotate('After (n = ' + str(mi_estimation_steel_stats.loc[violcombi, "expand_count"]) + ')\n'
-#                   'p5 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_5"], 2)) + '\n'
-#                   'p25 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_25"], 2)) + '\n'
-#                   'median = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_50"], 2)) + '\n'
-#                   'p75 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_75"], 2)) + '\n'
-#                   'p95 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_95"], 2)) + '\n'
-#                   'outliers > ' + str(yaxiscut) + ' = ' + str(comparisons[violcombi].loc[(comparisons[violcombi]['steel'] > yaxiscut)].count()[1]) + '\n',
-#                   # xy=(0.49, comparisons[violcombi]['steel'].max()), va='top', ha='right', fontsize='small', color='C1')
-#                   xy=(0.49, 0), va='bottom', ha='right', fontsize='small', color='C1')
-#     if mi_estimation_steel_stats.loc[violcombi, "db_count"] > 0:
-#         viol.annotate('Before (n = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_count"])) + ')\n'
-#                       'p5 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_25"], 2)) + '\n'
-#                       'p25 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_25"], 2)) + '\n'
-#                       'median = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_50"], 2)) + '\n'
-#                       'q75 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_75"], 2)) + '\n'
-#                       'q95 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_95"], 2)) + '\n',
-#                       # 'outliers > ' + str(yaxiscut) + ' = ' + str(comparisons[violcombi].loc[(comparisons[violcombi]['steel'] > yaxiscut)].count()[1]) + '\n',
-#                       # xy=(-0.49, comparisons[violcombi]['steel'].max()), va='top', fontsize='small', color='C0')
-#                       xy=(-0.49, 0), va='bottom', fontsize='small', color='C0')
-#     else:
-#         viol.annotate('Before (n = 0)', va='bottom', fontsize='small', color='C0',
-#                       # xy=(-0.49, comparisons[violcombi]['steel'].max()))
-#                       xy=(-0.49, 0))
-#     return viol
-
-
-# # portrait mode
-# with PdfPages('stop_at_' + str(stop_count) + '.pdf') as pdf:
-#     for region in dims_list_specified[2]:
-#         fig, axs = plt.subplots(4, 3, figsize=(20, 30))
-#         compareviolin_portrait('NR', 'C', region, 0, 0)
-#         compareviolin_portrait('RS', 'C', region, 0, 1)
-#         compareviolin_portrait('RM', 'C', region, 0, 2)
-#         compareviolin_portrait('NR', 'M', region, 1, 0)
-#         compareviolin_portrait('RS', 'M', region, 1, 1)
-#         compareviolin_portrait('RM', 'M', region, 1, 2)
-#         compareviolin_portrait('NR', 'S', region, 2, 0)
-#         compareviolin_portrait('RS', 'S', region, 2, 1)
-#         compareviolin_portrait('RM', 'S', region, 2, 2)
-#         compareviolin_portrait('NR', 'T', region, 3, 0)
-#         compareviolin_portrait('RS', 'T', region, 3, 1)
-#         compareviolin_portrait('RM', 'T', region, 3, 2)
-#         pdf.savefig(fig)
-
-
-def compareviolin_landscape(u, c, r, axx, axy):
-    xaxiscut = 200
-    violcombi = (u, c, r)
-    viol = sns.violinplot(y="combination", x="steel", data=comparisons[violcombi], hue="MIs", hue_order=("after", "before"), split=True,
-                          inner="quartile", scale="count", cut=0, bw=.1, linewidth=1, ax=axs[axx, axy])
-    viol.set_title(violcombi)
-    viol.set_xlim(left=0, right=xaxiscut)
-    viol.set_ylabel("")
-    viol.set_yticks([])
-    viol.legend([], [], frameon=False)
-    viol.annotate('After (n = ' + str(mi_estimation_steel_stats.loc[violcombi, "expand_count"]) + ')\n'
-                  'p5 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_5"], 2)) + '\n'
-                  'p25 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_25"], 2)) + '\n'
-                  'median = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_50"], 2)) + '\n'
-                  'p75 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_75"], 2)) + '\n'
-                  'p95 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "expand_95"], 2)) + '\n'
-                  'outliers > ' + str(xaxiscut) + ' = ' + str(comparisons[('NR', 'C', 'ASIA_TWN')].query('(steel > @xaxiscut) and (MIs == "after")').count()[1]),
-                  xy=(xaxiscut - 1, -0.49), va='top', ha='right', color='C0')
-    if mi_estimation_steel_stats.loc[violcombi, "db_count"] > 0:
-        viol.annotate('Before (n = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_count"])) + ')\n'
-                      'p5 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_25"], 2)) + '\n'
-                      'p25 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_25"], 2)) + '\n'
-                      'median = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_50"], 2)) + '\n'
-                      'q75 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_75"], 2)) + '\n'
-                      'q95 = ' + str(round(mi_estimation_steel_stats.loc[violcombi, "db_95"], 2)) + '\n'
-                      'outliers > ' + str(xaxiscut) + ' = ' + str(comparisons[('NR', 'C', 'ASIA_TWN')].query('(steel > @xaxiscut) and (MIs == "before")').count()[1]),
-                      # xy=(-0.49, comparisons[violcombi]['steel'].max()), va='top', fontsize='small', color='C0')
-                      xy=(xaxiscut - 1, 0.49), va='bottom', ha='right', color='C1')
-    else:
-        viol.annotate('Before (n = 0)', va='bottom', ha='right', color='C1',
-                      # xy=(-0.49, comparisons[violcombi]['steel'].max()))
-                      xy=(xaxiscut - 1, 0.49))
-    return viol
-
-
-# landscape mode. Less informative because it's hard to compare similar const. types down the columns
-with PdfPages('MI_results\\stop_at_' + str(stop_count) + '_l.pdf') as pdf:
-    for region in dims_list_specified[2]:
-        fig, axs = plt.subplots(3, 4, figsize=(30, 20))
-        compareviolin_landscape('NR', 'C', region, 0, 0)
-        compareviolin_landscape('NR', 'M', region, 0, 1)
-        compareviolin_landscape('NR', 'S', region, 0, 2)
-        compareviolin_landscape('NR', 'T', region, 0, 3)
-        compareviolin_landscape('RM', 'C', region, 1, 0)
-        compareviolin_landscape('RM', 'M', region, 1, 1)
-        compareviolin_landscape('RM', 'S', region, 1, 2)
-        compareviolin_landscape('RM', 'T', region, 1, 3)
-        compareviolin_landscape('RS', 'C', region, 2, 0)
-        compareviolin_landscape('RS', 'M', region, 2, 1)
-        compareviolin_landscape('RS', 'S', region, 2, 2)
-        compareviolin_landscape('RS', 'T', region, 2, 3)
-        pdf.savefig(fig)
-
-mi_estimation_steel_stats.reset_index().to_excel('MI_results\\stop_at_' + str(stop_count) + '.xlsx', sheet_name=('stop_at_' + str(stop_count)))
+# comparisons of before-after vis a vis number of rounds
+mi_estimation_stats[current_material]['db_count'] = mi_estimation_stats[current_material]['db_count'].fillna(0)
+sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="use_short", data=mi_estimation_stats[current_material])
+sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="const_short", data=mi_estimation_stats[current_material])
+sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="R5", data=mi_estimation_stats[current_material])
+sns.relplot(x="expand_count", y="db_count", hue="expand_rounds", data=mi_estimation_stats[current_material])
+sns.relplot(x="expand_count", y="db_count", hue="R5", data=mi_estimation_stats[current_material])
+sns.relplot(x="db_count", y="expand_count", hue="R5", size="expand_rounds", sizes=(10, 300), alpha=0.5, data=mi_estimation_stats[current_material])
+sns.relplot(x="expand_rounds", y="db_count", hue="R5", size="expand_count", sizes=(1, 400), alpha=0.3, data=mi_estimation_stats[current_material])
+sns.swarmplot(x="expand_rounds", y="expand_count", hue="R5", data=mi_estimation_stats[current_material])
