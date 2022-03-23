@@ -46,11 +46,12 @@ buildings_import['const_short'] = buildings_import['Random Forest'].where((build
 # clean up buildings_import
 buildings_import = buildings_import[['id'] + materials + dims_names]
 
-# # SSP 5 regions
-# buildings_import['R5'] = buildings_import['R5_32'].str.split('_').str[0]
-
 # %% EDA: database plots
 
+buildings_import.reset_index(inplace=True)
+
+# SSP 5 regions
+buildings_import['R5'] = buildings_import['R5_32'].str.split('_').str[0]
 
 # violin plots https://seaborn.pydata.org/generated/seaborn.violinplot.html
 sns.violinplot(x="concrete", y="const_short", data=buildings_import, cut=0, linewidth=1).legend_.remove()
@@ -79,48 +80,48 @@ kdebw = .6
 scattersize = 120
 scatteralpha = .6
 sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['steel']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['steel'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['wood']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['wood'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 
 sns.jointplot(data=buildings_import, x="steel", y="brick", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['steel']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              xlim=(0, round(buildings_import['steel'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="steel", y="wood", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['steel']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['wood']), ndigits=-2)),
+              xlim=(0, round(buildings_import['steel'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['wood'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 
 sns.jointplot(data=buildings_import, x="wood", y="brick", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['wood']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              xlim=(0, round(buildings_import['wood'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 # without outlyiers
 sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 500),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 300),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="const_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 
 sns.jointplot(data=buildings_import, x="steel", y="brick", hue="const_short", linewidth=0, height=8,
               xlim=(0, 500),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="steel", y="wood", hue="const_short", linewidth=0, height=8,
               xlim=(0, 500),
@@ -129,26 +130,26 @@ sns.jointplot(data=buildings_import, x="steel", y="wood", hue="const_short", lin
 
 sns.jointplot(data=buildings_import, x="wood", y="brick", hue="const_short", linewidth=0, height=8,
               xlim=(0, 300),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 
 # use types, without outlyiers
 sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="use_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 500),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="use_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 300),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="use_short", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 
 sns.jointplot(data=buildings_import, x="steel", y="brick", hue="use_short", linewidth=0, height=8,
               xlim=(0, 500),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 sns.jointplot(data=buildings_import, x="steel", y="wood", hue="use_short", linewidth=0, height=8,
               xlim=(0, 500),
@@ -157,26 +158,26 @@ sns.jointplot(data=buildings_import, x="steel", y="wood", hue="use_short", linew
 
 sns.jointplot(data=buildings_import, x="wood", y="brick", hue="use_short", linewidth=0, height=8,
               xlim=(0, 300),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 
 # ssp regions 32 to check that none of the regions govern these results, without outlyiers
 sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 500),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 300),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
 sns.jointplot(data=buildings_import, x="steel", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
               xlim=(0, 500),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 sns.jointplot(data=buildings_import, x="steel", y="wood", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
               xlim=(0, 500),
@@ -185,26 +186,26 @@ sns.jointplot(data=buildings_import, x="steel", y="wood", hue="R5_32", palette=(
 
 sns.jointplot(data=buildings_import, x="wood", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
               xlim=(0, 300),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
 # ssp 5 regions to check that none of the regions govern these results, without outlyiers
 sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="R5", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 500),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="R5", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
               ylim=(0, 300),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="R5", linewidth=0, height=8,
-              xlim=(0, round(max(buildings_import['concrete']), ndigits=-2)),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
 sns.jointplot(data=buildings_import, x="steel", y="brick", hue="R5", linewidth=0, height=8,
               xlim=(0, 500),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 sns.jointplot(data=buildings_import, x="steel", y="wood", hue="R5", linewidth=0, height=8,
               xlim=(0, 500),
@@ -213,96 +214,9 @@ sns.jointplot(data=buildings_import, x="steel", y="wood", hue="R5", linewidth=0,
 
 sns.jointplot(data=buildings_import, x="wood", y="brick", hue="R5", linewidth=0, height=8,
               xlim=(0, 300),
-              ylim=(0, round(max(buildings_import['brick']), ndigits=-2)),
+              ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
-
-# %% EDA: Kolmogorov-Smirnov Tests
-
-group_a = buildings_import.loc[(buildings_import['use_short'].str.match('RM')) & (buildings_import['const_short'].str.match('C')) & (buildings_import['R5_32'].str.match('OECD_JPN')), ('steel')]
-group_b = buildings_import.loc[(buildings_import['use_short'].str.match('RS')) & (buildings_import['const_short'].str.match('T')) & (buildings_import['R5_32'].str.match('OECD_JPN')), ('steel')]
-
-group_a = buildings_import.loc[(buildings_import['use_short'].str.match('RU')) & (buildings_import['const_short'].str.match('C')) & (buildings_import['R5_32'].str.match('LAM_LAM-M')), ('steel')]
-group_b = buildings_import.loc[(buildings_import['use_short'].str.match('RM')) & (buildings_import['const_short'].str.match('C')) & (buildings_import['R5_32'].str.match('LAM_LAM-M')), ('steel')]
-
-stats.ks_2samp(group_a, group_b)  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets do not come from the same distribution.
-stats.kruskal(group_a, group_b)  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets have different medians.
-stats.epps_singleton_2samp(group_a, group_b, t=(0.4, 0.8))
-stats.anderson_ksamp([group_a, group_b])  # works only when n>=2. If p < 0.05 we reject the null hypothesis. Hence the two sets do not come from the same distribution.
-
-stats.ks_2samp(buildings_import.query("R5_32 == 'OECD_JPN' and use_short == 'RM'")['steel'], buildings_import.query("R5_32 == 'OECD_JPN' and use_short == 'RS'")['steel'])
-
-# # approach that goes column by column
-# db_combination_index = pd.MultiIndex.from_product(dims_list, names=dims_names)
-# i = 0
-# current_column = pd.DataFrame(data=None, index=db_combination_index[i:], columns=db_combination_index[i:i + 1])
-# group_a = buildings_import.loc[(buildings_import['use_short'].str.match(current_column.index[:][0][0])) & (buildings_import['const_short'].str.match(current_column.index[:][0][1]) & (buildings_import['R5_32'].str.match(current_column.index[:][0][2]))), ('steel')]
-
-# current_column.iloc[:] = stats.ks_2samp(group_a, buildings_import.loc[(buildings_import['use_short'].str.match(current_column.reset_index().iloc[:,0])) & (buildings_import['const_short'].str.match(current_column.reset_index().iloc[:,1]) & (buildings_import['R5_32'].str.match(current_column.reset_index().iloc[:,2]))), ('steel')])
-
-# approach that moves cell by cell with 2 for loops - takes 20+ minutes
-
-db_combination_index = pd.MultiIndex.from_product(dims_list, names=dims_names)
-pairwise = pd.DataFrame(data=None, index=db_combination_index, columns=db_combination_index)
-pairwise_ks_p = pairwise.copy()
-pairwise_ks_s = pairwise.copy()
-pairwise_kw_p = pairwise.copy()
-pairwise_kw_s = pairwise.copy()
-pairwise_ands_p = pairwise.copy()
-
-# i = 0
-# j = 0
-for i in range(0, len(db_combination_index)):
-    for j in range(i + 1, len(db_combination_index)):
-        indexname = pairwise.iloc[[i, j]].index
-        group_a = buildings_import.loc[(buildings_import['use_short'].str.match(indexname[0][0])) & (buildings_import['const_short'].str.match(indexname[0][1]) & (buildings_import['R5_32'].str.match(indexname[0][2]))), ('steel')]
-        group_b = buildings_import.loc[(buildings_import['use_short'].str.match(indexname[1][0])) & (buildings_import['const_short'].str.match(indexname[1][1]) & (buildings_import['R5_32'].str.match(indexname[1][2]))), ('steel')]
-#        if not(group_a.empty | group_b.empty):            if not(group_a.empty | group_b.empty):
-        if (len(group_a) > 1 | len(group_b) > 1):
-            ks_result = stats.ks_2samp(group_a, group_b)
-            kp_result = stats.kruskal(group_a, group_b)
-            ands_result = stats.anderson_ksamp([group_a, group_b])
-            pairwise_ks_p.iloc[j, i] = ks_result[1]
-            pairwise_kw_p.iloc[j, i] = kp_result[1]
-            pairwise_ands_p.iloc[j, i] = ands_result[-1]
-        else:
-            pairwise_ks_p.iloc[j, i] = 2
-            pairwise_kw_p.iloc[j, i] = 2
-            pairwise_ands_p.iloc[j, i] = 2
-
-
-pairwise_ks_p_clean = pairwise_ks_p.replace(2, np.NAN)
-pairwise_ks_p_clean.dropna(how="all", inplace=True)
-pairwise_ks_p_clean.dropna(axis='columns', how="all", inplace=True)
-pairwise_ks_p_clean.to_excel("db_analysis\\ks_p.xlsx", merge_cells=False)
-pairwise_ks_p_clean_long = pairwise_ks_p_clean.stack([0, 1, 2])
-sns.heatmap(pairwise_ks_p_clean, cmap="RdYlBu_r", center=0.05, xticklabels=1, yticklabels=1, robust=True)
-
-pairwise_kw_p_clean = pairwise_kw_p.replace(2, np.NAN)
-pairwise_kw_p_clean.dropna(how="all", inplace=True)
-pairwise_kw_p_clean.dropna(axis='columns', how="all", inplace=True)
-pairwise_kw_p_clean.to_excel("db_analysis\\kw_p.xlsx", merge_cells=False)
-
-
-# long form, seems to take much longer
-# pairwise2 = pd.DataFrame(data=None, index=db_combination_index, columns=db_combination_index)
-# pairwiselong = pairwise2.stack([0, 1, 2], dropna=False)
-# for i in range(0, len(pairwiselong)):
-#     group_a = buildings_import.loc[(buildings_import['use_short'].str.match(pairwiselong.index[i][0])) & (buildings_import['const_short'].str.match(pairwiselong.index[i][1]) & (buildings_import['R5_32'].str.match(pairwiselong.index[i][2]))), ('steel')]
-#     group_b = buildings_import.loc[(buildings_import['use_short'].str.match(pairwiselong.index[i][3])) & (buildings_import['const_short'].str.match(pairwiselong.index[i][4]) & (buildings_import['R5_32'].str.match(pairwiselong.index[i][5]))), ('steel')]
-#     if not(group_a.empty | group_b.empty):
-#         ks_result = stats.ks_2samp(group_a, group_b)
-#         pairwiselong.iloc[i] = ks_result[1]
-#     else:
-#         pairwiselong.iloc[i] = 2
-
-# pairwiselong = pairwise2.stack([0, 1, 2], dropna=False)
-# pairwiselong.index.names = ['use_short_a', 'const_short_a', 'R5_32_a', 'use_short_b', 'const_short_b', 'R5_32_b']
-# pairwiselong = pairwiselong.reset_index()
-# pairwiselong.rename(columns={0: 'ks'}, inplace=True)
-# pairwiselong['ks'] = stats.ks_2samp(
-#     buildings_import.loc[(buildings_import['use_short'].str.match(pairwiselong['use_short_a'])) & (buildings_import['const_short'].str.match(pairwiselong['const_short_a']) & (buildings_import['R5_32'].str.match(pairwiselong['R5_32_a']))), ('steel')].
-#     buildings_import.loc[(buildings_import['use_short'].str.match(pairwiselong['use_short_b'])) & (buildings_import['const_short'].str.match(pairwiselong['const_short_b']) & (buildings_import['R5_32'].str.match(pairwiselong['R5_32_b']))), ('steel')])[1]
 
 # %% final setups of the database data
 
@@ -335,15 +249,65 @@ db_combinations_stats.loc[:, db_combinations_stats.columns.isin(['concrete'], le
 db_combinations_stats_valid = db_combinations_stats.dropna(how='all')
 # db_combinations_stats = db_combinations_stats.fillna(0)
 
-
 # # exoort db_combinations_stats
 # db_combinations_stats.to_excel("MI_results\\db_combinations_stats.xlsx", sheet_name="sheet1")
 # db_combinations_stats.unstack().to_clipboard()
 
+# %% EDA: Nonparametric statistical tests
+
+current_material = 'brick'
+pairwise_ks_p = pd.DataFrame(data=None, index=db_combinations_stats_valid.index, columns=db_combinations_stats_valid.index)
+pairwise_kw_p = pairwise_ks_p.copy()
+pairwise_ands_p = pairwise_ks_p.copy()
+# pairwise_ks_s = pairwise_ks_p.copy()
+# pairwise_kw_s = pairwise_ks_p.copy()
+
+pairwise_col_count = 1
+for pairwise_ind_combi in pairwise_ks_p.index:
+    pairwise_ind_data = buildings_import.loc[pairwise_ind_combi, current_material]
+    for pairwise_col_combi in pairwise_ks_p.columns[pairwise_col_count:]:
+        pairwise_col_data = buildings_import.loc[pairwise_col_combi, current_material]
+        if (len(pairwise_ind_data) > 2 and len(pairwise_col_data) > 2):
+            pairwise_ks_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.ks_2samp(pairwise_ind_data, pairwise_col_data)[1]  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets do not come from the same distribution.
+            pairwise_kw_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.kruskal(pairwise_ind_data, pairwise_col_data)[1]  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets have different medians.
+            pairwise_ands_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.anderson_ksamp([pairwise_ind_data, pairwise_col_data])[-1]  # works only when n>=2. If p < 0.05 we reject the null hypothesis. Hence the two sets do not come from the same distribution.
+    pairwise_col_count = pairwise_col_count + 1
+
+
+pairwise_ks_p.dropna(how="all", inplace=True)
+pairwise_ks_p.dropna(axis='columns', how="all", inplace=True)
+
+pairwise_kw_p.dropna(how="all", inplace=True)
+pairwise_kw_p.dropna(axis='columns', how="all", inplace=True)
+
+pairwise_ands_p.dropna(how="all", inplace=True)
+pairwise_ands_p.dropna(axis='columns', how="all", inplace=True)
+
+# summary p results
+pairwise_long = pd.concat([pairwise_ks_p.stack([0, 1, 2]), pairwise_kw_p.stack([0, 1, 2]), pairwise_ands_p.stack([0, 1, 2])], axis=1)
+pairwise_long.columns = ['Kolmogorov-Smirnov test', 'Kruskal-Wallis H-test', 'k-sample Anderson-Darling test']
+pairwise_long.to_excel("db_analysis\\" + current_material + "_nonparametric_tests.xlsx", merge_cells=False)
+
+# visualize cumulative distributions (what the Kolmogorov-Smirnov test does)
+sns.ecdfplot(data=pd.concat([buildings_import.loc[('NR', 'C', 'OECD_EU15')], buildings_import.loc[('NR', 'C', 'ASIA_CHN')]]).reset_index(), x="steel", hue='R5_32')
+sns.ecdfplot(data=buildings_import.loc[('RS', 'C')].reset_index(), x="concrete", hue='R5_32')
+sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'C' and R5_32 == 'ASIA_CHN'"), x="concrete", hue='use_short')
+# compare:
+sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'C' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
+sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'S' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
+sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'T' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
+sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'W' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
+# with:
+sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'RS' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
+sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'RM' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
+sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'RU' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
+sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'NR' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
+sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'UN' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
+
 # %% separate buildings_import to individual dataframes by valid combinations
 
-# prefiltered as a list only with valid combinations (i.e. existing in buildings_import): [combination tuple, dataframe, [no. of rows in df, counts of each material], expansion score set to 0]
-
+# for each material in this dict, prefiltered as a list only with valid combinations (i.e. existing in buildings_import): [combination tuple, dataframe, [no. of rows in df, counts of each material], expansion score set to 0]
+# it's a list and not a dict in case the selection algorithm needs to duplicate list items. A dict can't have duplicate keys.
 db_combinations_data = {}
 for current_material in materials:
     db_combinations_data[current_material] = []
@@ -479,9 +443,11 @@ for current_material in materials:
     # HINT cosmetic: resort by index
     mi_estimation_stats[current_material].sort_index(inplace=True)
     filename = current_material + '_stop_at_' + str(stop_count) + '_20200317'
-    mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(current_material + filename))
+# %% export statistics results to Excel
 
-# %% analysis: prepare the results
+    mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(filename[:-9]))
+
+# %% analysis: summary boxplots
 
 # merge results data for boxplots, start with a list of dataframes and then concatenate it to one dataframe
 # structure should be: combination dict: use, const, r32, material, value
@@ -500,8 +466,6 @@ analysis_comparison_data.index.rename(dims_names + ['material', 'id'], inplace=T
 analysis_comparison_data.reset_index(inplace=True)
 analysis_comparison_data.drop(materials + ['id'], axis=1, inplace=True)
 analysis_comparison_data['R5'] = analysis_comparison_data['R5_32'].str.split('_').str[0]
-
-# %% analysis: boxplots
 
 sns.boxplot(data=analysis_comparison_data.loc[analysis_comparison_data['combination'] == "('RS', 'C', 'OECD_EU15')"], x='material', y='value')
 sns.catplot(data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == "OECD_EU15"], x='material', y='value', row='use_short', col='const_short', kind="violin")
@@ -637,19 +601,10 @@ for current_material in materials:
 
 # %% analysis: growth of distributions by expansion round, histograms
 
-growth = sns.histplot(data=analysis_growth[current_material][current_combi], x=current_material,
-                      hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],  # hue_order=["6", "5", "4", "3", "2", "1", "0"],
-                      palette="magma", alpha=1, linewidth=0,  # fill=False,
-                      stat="count", element="step",
-                      binwidth=75)
-growth.set_xlim(left=0, right=buildings_import.max()[current_material])
-
 current_combi = ('RS', 'T', 'ASIA_TWN')
 current_combi = ('RM', 'T', 'OECD_EU15')
 
-
 growth, growth_axes = plt.subplots(3, gridspec_kw={"height_ratios": (.1, .1, .8)})
-
 growth_data = mi_estimation_data[current_material][current_combi].copy().reset_index()
 growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
 sns.set_palette("magma", 7)
