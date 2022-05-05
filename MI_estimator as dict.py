@@ -13,9 +13,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from datetime import date
-
-today = date.today().strftime("%Y%m%d")
 
 chdir('C:\\Users\\Tomer\\Dropbox\\-the research\\2020 10 IIASA\\MI_project\\git\\MaterialIntensityEstimator')
 
@@ -37,10 +34,9 @@ for dim_x in dims_names:
 # HINT removed IN 'informal' because there are simply not enough datapoints for meaningful estimations, consider including later
 dims_list[0] = dims_list[0][1:]
 
-materials = ['concrete', 'steel', 'wood', 'brick']
-materials += ['glass', 'aluminum', 'copper']
-
 # %% load the MI database with const. type ML results from Orange
+
+materials = ['concrete', 'steel', 'wood', 'brick']
 
 buildings_import = pd.read_excel("data_input_and_ml_processing\\buildings_v2-const_type_ML.xlsx", sheet_name="Sheet1")
 
@@ -77,11 +73,7 @@ sns.catplot(x="const_short", y="brick", col="use_short", kind="violin", data=bui
 
 sns.catplot(x="use_short", y="concrete", col="const_short", row="R5", kind="violin", data=buildings_import, cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
 sns.catplot(x="use_short", y="steel", col="const_short", row="R5", kind="violin", data=buildings_import.query('steel < 450'), cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
-sns.catplot(x="const_short", y="glass", col="use_short", row="R5", kind="violin", data=buildings_import.query('steel < 450'), cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
-
-sns.catplot(x="const_short", y="glass", col="use_short", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
-sns.catplot(x="const_short", y="aluminum", col="use_short", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
-sns.catplot(x="const_short", y="copper", col="use_short", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
+sns.catplot(x="const_short", y="steel", col="use_short", row="R5", kind="violin", data=buildings_import.query('steel < 450'), cut=0, linewidth=1, scale="width", bw=.2, height=3, aspect=1.2)
 
 # bivariate distribution plots https://seaborn.pydata.org/tutorial/distributions.html#visualizing-bivariate-distributions
 kdebw = .6
@@ -225,14 +217,6 @@ sns.jointplot(data=buildings_import, x="wood", y="brick", hue="R5", linewidth=0,
               ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
-# copper and aluminum: check that there's no clear difference in categories
-sns.catplot(data=buildings_import.reset_index(), x="copper", y="const_short")
-sns.catplot(data=buildings_import.reset_index(), x="copper", y="use_short")
-sns.catplot(data=buildings_import.reset_index(), x="copper", y="R5_32")
-
-sns.catplot(data=buildings_import.reset_index(), x="aluminum", y="const_short")
-sns.catplot(data=buildings_import.reset_index(), x="aluminum", y="use_short")
-sns.catplot(data=buildings_import.reset_index(), x="aluminum", y="R5_32")
 
 # %% final setups of the database data
 
@@ -241,21 +225,17 @@ buildings_import = buildings_import[buildings_import.use_short != 'IN']
 # set up the same multiindex as the other dataframes
 buildings_import.set_index(dims_names, inplace=True)
 # sort to make pandas faster and with less warnings
-buildings_import.sort_index(inplace=True)
+buildings_import = buildings_import.sort_index()
 
 
 # %% create a new dataframe of the counts of unique combinations that exist in the DB
 # including unspecifieds
 
 db_combinations_stats = [pd.DataFrame(data=None, index=pd.MultiIndex.from_product(dims_list, names=dims_names)),
-                         buildings_import[materials].groupby(dims_names).count(),
-                         buildings_import[materials].groupby(dims_names).mean(),
-                         buildings_import[materials].groupby(dims_names).std()[materials],
-                         buildings_import[materials].groupby(dims_names).quantile(q=0.05),
-                         buildings_import[materials].groupby(dims_names).quantile(q=0.25),
-                         buildings_import[materials].groupby(dims_names).quantile(q=0.50),
-                         buildings_import[materials].groupby(dims_names).quantile(q=0.75),
-                         buildings_import[materials].groupby(dims_names).quantile(q=0.95)]
+                         buildings_import.groupby(dims_names).count()[materials], buildings_import.groupby(dims_names).mean()[materials],
+                         buildings_import.groupby(dims_names).std()[materials], buildings_import.groupby(dims_names).quantile(q=0.05)[materials],
+                         buildings_import.groupby(dims_names).quantile(q=0.25)[materials], buildings_import.groupby(dims_names).quantile(q=0.50)[materials],
+                         buildings_import.groupby(dims_names).quantile(q=0.75)[materials], buildings_import.groupby(dims_names).quantile(q=0.95)[materials]]
 # TODO decide which quantile interpolation is best i.e. what does excel do?
 
 db_combinations_stats = pd.concat(db_combinations_stats, axis=1, keys=['', 'count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95'])
@@ -269,95 +249,23 @@ db_combinations_stats.loc[:, db_combinations_stats.columns.isin(['concrete'], le
 db_combinations_stats_valid = db_combinations_stats.dropna(how='all')
 # db_combinations_stats = db_combinations_stats.fillna(0)
 
+
 # # exoort db_combinations_stats
-# db_combinations_stats_valid.to_excel("MI_results\\db_combinations_stats.xlsx", merge_cells=False)
+# db_combinations_stats.to_excel("MI_results\\db_combinations_stats.xlsx", sheet_name="sheet1")
 # db_combinations_stats.unstack().to_clipboard()
-
-# %% EDA: Nonparametric statistical tests
-
-pairwise_writer = pd.ExcelWriter("db_analysis\\nonparametric_tests_" + today + ".xlsx", engine='openpyxl')
-
-for current_material in materials:
-    pairwise_ks_p = pd.DataFrame(data=None, index=db_combinations_stats_valid.index, columns=db_combinations_stats_valid.index)
-    pairwise_kw_p = pairwise_ks_p.copy()
-    pairwise_ands_p = pairwise_ks_p.copy()
-    # pairwise_ks_s = pairwise_ks_p.copy()
-    # pairwise_kw_s = pairwise_ks_p.copy()
-
-    pairwise_col_count = 1
-    for pairwise_ind_combi in pairwise_ks_p.index:
-        pairwise_ind_data = buildings_import.loc[pairwise_ind_combi, current_material]
-        for pairwise_col_combi in pairwise_ks_p.columns[pairwise_col_count:]:
-            pairwise_col_data = buildings_import.loc[pairwise_col_combi, current_material]
-            if (len(pairwise_ind_data) > 2 and len(pairwise_col_data) > 2):
-                pairwise_ks_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.ks_2samp(pairwise_ind_data, pairwise_col_data)[1]  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets do not come from the same distribution.
-                pairwise_kw_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.kruskal(pairwise_ind_data, pairwise_col_data)[1]  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets have different medians.
-                pairwise_ands_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.anderson_ksamp([pairwise_ind_data, pairwise_col_data])[-1]  # works only when n>=2. If p < 0.05 we reject the null hypothesis. Hence the two sets do not come from the same distribution.
-        pairwise_col_count = pairwise_col_count + 1
-
-    pairwise_ks_p.dropna(how="all", inplace=True)
-    pairwise_ks_p.dropna(axis='columns', how="all", inplace=True)
-
-    pairwise_kw_p.dropna(how="all", inplace=True)
-    pairwise_kw_p.dropna(axis='columns', how="all", inplace=True)
-
-    pairwise_ands_p.dropna(how="all", inplace=True)
-    pairwise_ands_p.dropna(axis='columns', how="all", inplace=True)
-
-    pairwise_ks_p.T.to_excel(pairwise_writer, sheet_name=current_material + "_ks", merge_cells=False)
-    pairwise_kw_p.T.to_excel(pairwise_writer, sheet_name=current_material + "_kw", merge_cells=False)
-    pairwise_ands_p.T.to_excel(pairwise_writer, sheet_name=current_material + "_ands", merge_cells=False)
-    # # export pairwise matrices as individual Excel files
-    # pairwise_ks_p.to_excel("db_analysis\\" + current_material + "_pairwise_ks_p.xlsx", merge_cells=False)
-    # pairwise_kw_p.to_excel("db_analysis\\" + current_material + "_pairwise_kw_p.xlsx", merge_cells=False)
-    # pairwise_ands_p.to_excel("db_analysis\\" + current_material + "_pairwise_ands_p.xlsx", merge_cells=False)
-
-    # summary p results
-    pairwise_long = pd.concat([pairwise_ks_p.stack([0, 1, 2]), pairwise_kw_p.stack([0, 1, 2]), pairwise_ands_p.stack([0, 1, 2])], axis=1)
-    pairwise_long.index.names = ['use_short_1', 'const_short_1', 'R5_32_1', 'use_short_2', 'const_short_2', 'R5_32_2']
-    pairwise_long.columns = ['Kolmogorov_Smirnov_test', 'Kruskal_Wallis_H_test', 'k_sample_Anderson_Darling_test']
-    pairwise_long.sort_index(inplace=True)
-    pairwise_long['tests_over_0.05_ie_same_dists'] = 0
-    pairwise_long.loc[pairwise_long['Kolmogorov_Smirnov_test'] > 0.05, 'tests_over_0.05_ie_same_dists'] += 1
-    pairwise_long.loc[pairwise_long['Kruskal_Wallis_H_test'] > 0.05, 'tests_over_0.05_ie_same_dists'] += 1
-    pairwise_long.loc[pairwise_long['k_sample_Anderson_Darling_test'] > 0.05, 'tests_over_0.05_ie_same_dists'] += 1
-    pairwise_long.to_excel(pairwise_writer, sheet_name=current_material + "_summary", merge_cells=False)
-    # pairwise_long.to_excel("db_analysis\\" + current_material + "_nonparametric_tests.xlsx", merge_cells=False)  # export as individual Excel file
-
-pairwise_writer.save()
-pairwise_writer.close()
-
-# visualize cumulative distributions (what the Kolmogorov-Smirnov test does)
-# pairwise:
-sns.ecdfplot(x="brick", hue='use_short',
-             data=pd.concat([buildings_import.loc[('NR', 'M', 'OECD_EU15')],
-                             buildings_import.loc[('RM', 'T', 'OECD_EU15')]]).reset_index())
-sns.histplot(x="brick", hue='use_short', element="step", stat="percent", common_norm=False,
-             data=pd.concat([buildings_import.loc[('NR', 'T', 'ASIA_CHN')],
-                             buildings_import.loc[('UN', 'T', 'ASIA_CHN')]]).reset_index())
-# multiple categories:
-sns.ecdfplot(data=buildings_import.loc[('RS', 'C')].reset_index(), x="concrete", hue='R5_32')
-sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'C' and R5_32 == 'ASIA_CHN'"), x="concrete", hue='use_short')
-# compare:
-sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'C' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
-sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'S' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
-sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'T' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
-sns.ecdfplot(data=buildings_import.reset_index().query("const_short == 'W' and R5_32 == 'OECD_EU15'"), x="wood", hue='use_short')
-# with:
-sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'RS' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
-sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'RM' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
-sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'RU' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
-sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'NR' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
-sns.ecdfplot(data=buildings_import.reset_index().query("use_short == 'UN' and R5_32 == 'OECD_EU15'"), x="wood", hue='const_short')
 
 # %% separate buildings_import to individual dataframes by valid combinations
 
 # for each material in this dict, prefiltered as a list only with valid combinations (i.e. existing in buildings_import): [combination tuple, dataframe, [no. of rows in df, counts of each material], expansion score set to 0]
-# it's a list and not a dict in case the selection algorithm needs to duplicate list items. A dict can't have duplicate keys.
+# as a dict
 db_combinations_data = {}
 for current_material in materials:
-    db_combinations_data[current_material] = []
-    [db_combinations_data[current_material].append([row[0], buildings_import.loc[row[0]], int(db_combinations_stats_valid.loc[row[0], ('count', current_material)]), 0]) for row in db_combinations_stats_valid.itertuples() if db_combinations_stats_valid.loc[row[0], ('count', current_material)] > 0]
+    db_combinations_data[current_material] = {}
+    for row in db_combinations_stats_valid.itertuples():
+        db_combinations_data[current_material][row[0]] = [buildings_import.loc[row[0]], int(db_combinations_stats_valid.loc[row[0], ('count', current_material)]), 0]
+
+# as a list
+# [db_combinations_data[current_material].append([row[0], buildings_import.loc[row[0]], int(db_combinations_stats_valid.loc[row[0], ('count', current_material)]), 0]) for row in db_combinations_stats_valid.itertuples() if db_combinations_stats_valid.loc[row[0], ('count', current_material)] > 0]
 
 
 # %% create a dataframe with all practical (i.e. not unspecifieds) combination options to be filled with data
@@ -388,26 +296,110 @@ for current_material in materials:
     mi_estimation_stats[current_material]['db_75'] = db_combinations_stats[('p75', current_material)]
     mi_estimation_stats[current_material]['db_95'] = db_combinations_stats[('p95', current_material)]
 
-# %% calculate scores for materials' coverage
-# to decide whether to use the selection algorithm or global statistics
+# %% EDA: Kolmogorov-Smirnov Tests
+
+buildings_import.reset_index(inplace=True)
+
+# sample tests
+# group_a = buildings_import.loc[(buildings_import['use_short'].str.match('RM')) & (buildings_import['const_short'].str.match('C')) & (buildings_import['R5_32'].str.match('OECD_JPN')), ('steel')]
+# group_b = buildings_import.loc[(buildings_import['use_short'].str.match('RS')) & (buildings_import['const_short'].str.match('T')) & (buildings_import['R5_32'].str.match('OECD_JPN')), ('steel')]
+
+# group_a = buildings_import.loc[(buildings_import['use_short'].str.match('RU')) & (buildings_import['const_short'].str.match('C')) & (buildings_import['R5_32'].str.match('LAM_LAM-M')), ('steel')]
+# group_b = buildings_import.loc[(buildings_import['use_short'].str.match('RM')) & (buildings_import['const_short'].str.match('C')) & (buildings_import['R5_32'].str.match('LAM_LAM-M')), ('steel')]
+
+# stats.ks_2samp(group_a, group_b)  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets do not come from the same distribution.
+# stats.kruskal(group_a, group_b)  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets have different medians.
+# stats.epps_singleton_2samp(group_a, group_b, t=(0.4, 0.8))
+# stats.anderson_ksamp([group_a, group_b])  # works only when n>=2. If p < 0.05 we reject the null hypothesis. Hence the two sets do not come from the same distribution.
+
+# stats.ks_2samp(buildings_import.query("R5_32 == 'OECD_JPN' and use_short == 'RM'")['steel'], buildings_import.query("R5_32 == 'OECD_JPN' and use_short == 'RS'")['steel'])
+
+pairwise_ks_p = pd.DataFrame(data=None, index=db_combinations_stats_valid.index, columns=db_combinations_stats_valid.index)
+# pairwise_ks_s = pairwise_ks_p.copy()
+pairwise_kw_p = pairwise_ks_p.copy()
+# pairwise_kw_s = pairwise_ks_p.copy()
+pairwise_ands_p = pairwise_ks_p.copy()
+
+i = 1
+j = 2
+current_material = 'steel'
+for i in pairwise_ks_p.index:
+    j_count = 1
+    for j in pairwise_ks_p.columns[j_count:]:
+        group_a = db_combinations_data[current_material]
+        group_b = buildings_import.loc[(buildings_import['use_short'].str.match(indexname[1][0])) & (buildings_import['const_short'].str.match(indexname[1][1]) & (buildings_import['R5_32'].str.match(indexname[1][2]))), (current_material)]
+        # if not(group_a.empty | group_b.empty):
+        if (len(group_a) > 1 | len(group_b) > 1):
+            ks_result = stats.ks_2samp(group_a, group_b)
+            kp_result = stats.kruskal(group_a, group_b)
+            ands_result = stats.anderson_ksamp([group_a, group_b])
+            pairwise_ks_p.iloc[j, i] = ks_result[1]
+            pairwise_kw_p.iloc[j, i] = kp_result[1]
+            pairwise_ands_p.iloc[j, i] = ands_result[-1]
+        else:
+            pairwise_ks_p.iloc[j, i] = 2
+            pairwise_kw_p.iloc[j, i] = 2
+            pairwise_ands_p.iloc[j, i] = 2
+        j_count += 1
 
 
-def gini(x):  # https://stackoverflow.com/questions/48999542/more-efficient-weighted-gini-coefficient-in-python
-    x = np.asarray(x)
-    sorted_x = np.sort(x)
-    n = len(x)
-    cumx = np.cumsum(sorted_x, dtype=float)
-    return round((n + 1 - 2 * np.sum(cumx) / cumx[-1]) / n, 3)
+# approach that moves cell by cell with 2 for loops - takes 20+ minutes
+
+db_combination_index = pd.MultiIndex.from_product(dims_list, names=dims_names)
+pairwise_ks_p = pd.DataFrame(data=None, index=db_combination_index, columns=db_combination_index)
+# pairwise_ks_s = pairwise_ks_p.copy()
+pairwise_kw_p = pairwise_ks_p.copy()
+# pairwise_kw_s = pairwise_ks_p.copy()
+pairwise_ands_p = pairwise_ks_p.copy()
+
+current_material = 'steel'
+for i in range(0, len(db_combination_index)):
+    for j in range(i + 1, len(db_combination_index)):
+        indexname = pairwise_ks_p.iloc[[i, j]].index
+        group_a = buildings_import.loc[(buildings_import['use_short'].str.match(indexname[0][0])) & (buildings_import['const_short'].str.match(indexname[0][1]) & (buildings_import['R5_32'].str.match(indexname[0][2]))), (current_material)]
+        group_b = buildings_import.loc[(buildings_import['use_short'].str.match(indexname[1][0])) & (buildings_import['const_short'].str.match(indexname[1][1]) & (buildings_import['R5_32'].str.match(indexname[1][2]))), (current_material)]
+        # if not(group_a.empty | group_b.empty):
+        if (len(group_a) > 1 | len(group_b) > 1):
+            ks_result = stats.ks_2samp(group_a, group_b)
+            kp_result = stats.kruskal(group_a, group_b)
+            ands_result = stats.anderson_ksamp([group_a, group_b])
+            pairwise_ks_p.iloc[j, i] = ks_result[1]
+            pairwise_kw_p.iloc[j, i] = kp_result[1]
+            pairwise_ands_p.iloc[j, i] = ands_result[-1]
+        else:
+            pairwise_ks_p.iloc[j, i] = 2
+            pairwise_kw_p.iloc[j, i] = 2
+            pairwise_ands_p.iloc[j, i] = 2
 
 
-db_material_scores = pd.DataFrame(index=materials)
-db_material_scores['count'] = db_combinations_stats_valid['count'].sum()
-db_material_scores['combi_coverage'] = db_combinations_stats_valid['avg'].count() / db_combinations_stats_valid['count'].count()
-db_material_scores['gini'] = [gini(db_combinations_stats_valid['count'][current_material]) for current_material in db_material_scores.index]
-db_material_scores['score'] = 0
-db_material_scores.loc[db_material_scores['count'] > len(buildings_import) * 0.15, "score"] += 1  # covers at least 15% of the db (at least 120 datapoints)
-db_material_scores.loc[db_material_scores['combi_coverage'] > 0.5, "score"] += 1  # covers at least 50% of the existing combinations in the db
-db_material_scores.loc[db_material_scores['gini'] < 0.8, "score"] += 1  # datapoints don't all come from very few combinations
+pairwise_ks_p_clean = pairwise_ks_p.replace(2, np.NAN)
+pairwise_ks_p_clean.dropna(how="all", inplace=True)
+pairwise_ks_p_clean.dropna(axis='columns', how="all", inplace=True)
+# pairwise_ks_p_clean.to_excel("db_analysis\\ks_p.xlsx", merge_cells=False)
+# sns.heatmap(pairwise_ks_p_clean, cmap="RdYlBu_r", center=0.05, xticklabels=1, yticklabels=1, robust=True)
+
+pairwise_kw_p_clean = pairwise_kw_p.replace(2, np.NAN)
+pairwise_kw_p_clean.dropna(how="all", inplace=True)
+pairwise_kw_p_clean.dropna(axis='columns', how="all", inplace=True)
+# pairwise_kw_p_clean.to_excel("db_analysis\\kw_p.xlsx", merge_cells=False)
+
+pairwise_ands_p_clean = pairwise_ands_p.replace(2, np.NAN)
+pairwise_ands_p_clean.dropna(how="all", inplace=True)
+pairwise_ands_p_clean.dropna(axis='columns', how="all", inplace=True)
+# pairwise_ands_p_clean.to_excel("db_analysis\\ands_p.xlsx", merge_cells=False)
+
+# summary p results
+pairwise_ks_p_clean_long = pairwise_ks_p_clean.stack([0, 1, 2])
+pairwise_kw_p_clean_long = pairwise_kw_p_clean.stack([0, 1, 2])
+pairwise_ands_p_clean_long = pairwise_ands_p_clean.stack([0, 1, 2])
+pairwise_long = pd.concat([pairwise_ks_p_clean_long, pairwise_kw_p_clean_long, pairwise_ands_p_clean_long], axis=1)
+pairwise_long.columns = ['Kolmogorov-Smirnov test', 'Kruskal-Wallis H-test', 'k-sample Anderson-Darling test']
+pairwise_long.to_excel("db_analysis\\" + current_material + "_nonparametric_tests.xlsx", merge_cells=False)
+
+# restore multiindex
+buildings_import.set_index(dims_names, inplace=True)
+# sort to make pandas faster and with less warnings
+buildings_import = buildings_import.sort_index()
 
 # %% selection algorithm
 
@@ -420,18 +412,17 @@ def expand_selection(selection, count, condition, material):
         selection += newselection
         count = 0
         for item in selection:
-            item[3] += 1  # counter for how many rounds this selection was in an expansion
-            count += item[2] * item[3]  # count how many datapoints are in selection
+            item[-1] += 1  # counter for how many rounds this selection was in an expansion
+            count += item[-2] * item[-1]  # count how many datapoints are in selection
     return selection, count
 
 
-mi_estimation_writer = pd.ExcelWriter('MI_results\\stop_at_' + str(stop_count) + '_' + today + ".xlsx", engine='openpyxl')
-
-# expand selection algorithm for materials with score >= 2
-for current_material in db_material_scores.query('score >= 2').index:
+# HINT cosmetic: for simple tracking in the sandbox: sort by count of appearances in the db
+for current_material in materials:
     mi_estimation_stats[current_material] = mi_estimation_stats[current_material].sort_values(by="db_count", ascending=False)
 
-    for current_combi in mi_estimation_stats[current_material].index:  # running index for the current combination in mi_estimation
+    for current_index in mi_estimation_stats[current_material].itertuples():  # running index for the current combination in mi_estimation
+        current_combi = current_index[0]  # the current combination, a tuple. if a list is needed use list(mi_estimation.index[0])
 
         current_selection = []
         current_count = 0
@@ -443,7 +434,7 @@ for current_material in db_material_scores.query('score >= 2').index:
         # 1.2 add similar use types
         if current_count < stop_count:
             if current_combi[0] == 'NR':
-                current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"
+                current_condition = "('UN' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"  # TODO this reselects the perfect combination! see RS T OECD_USA
                 current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
             else:  # i.e. if current_combi[0][0] == 'R':
                 current_condition = "('RU' == v[0][0]) and (current_combi[1] == v[0][1]) and (current_combi[2] == v[0][2])"  # TODO consider whether to first add UN (currently in the IF below) and only then RU?
@@ -486,76 +477,35 @@ for current_material in db_material_scores.query('score >= 2').index:
                     current_selection, current_count = expand_selection(current_selection, current_count, current_condition, current_material)
 
         # When done: concatenate current_selection into one dataframe, including repetition of selections from previous expansion rounds i.e. v[3] in the second for loop
-        # try:  # TODO temporary solution for empty combinations
-        current_selection_combined = pd.concat([v[1] for v in current_selection for i in range(v[3])], copy=True).loc[:, ['id', current_material]].dropna()
-        current_selection_combined['expansion_round'] = current_selection_combined.groupby('id').cumcount()
-        current_selection_combined['expansion_round'] = current_selection_combined['expansion_round'].max() - current_selection_combined['expansion_round']
-        if current_combi not in current_selection_combined.index:
-            current_selection_combined['expansion_round'] += 1
-        # fill results into mi_estimation_stats 'expanded_count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95', 'expansion_rounds'
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_count'] = current_count
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_avg'] = current_selection_combined[current_material].mean()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_sd'] = current_selection_combined[current_material].std()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_rounds'] = current_selection[0][3]
-        # except ValueError:
-        #     current_selection_combined = pd.DataFrame(columns=['id', current_material, 'expansion_round'])
+        try:  # TODO temporary solution for empty combinations
+            current_selection_combined = pd.concat([v[1] for v in current_selection for i in range(v[3])], copy=True).loc[:, ['id', current_material]].dropna()
+            current_selection_combined['expansion_round'] = current_selection_combined.groupby('id').cumcount()
+            current_selection_combined['expansion_round'] = current_selection_combined['expansion_round'].max() - current_selection_combined['expansion_round']
+            if current_combi not in current_selection_combined.index:
+                current_selection_combined['expansion_round'] += 1
+            # fill results into mi_estimation_stats 'expanded_count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95', 'expansion_rounds'
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_count'] = current_count
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_avg'] = current_selection_combined[current_material].mean()
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_sd'] = current_selection_combined[current_material].std()
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
+            mi_estimation_stats[current_material].loc[current_combi, 'expand_rounds'] = current_selection[0][3]
+        except ValueError:
+            current_selection_combined = pd.DataFrame()
 
         # save current_selection_combined for backup and reference
         mi_estimation_data[current_material][current_combi] = current_selection_combined.copy()
 
     # HINT cosmetic: resort by index
     mi_estimation_stats[current_material].sort_index(inplace=True)
+    filename = current_material + '_stop_at_' + str(stop_count) + '_20200317'
 
-    # # export as individual Excel file
-    # filename = current_material + '_stop_at_' + str(stop_count) + '_' + today
-    # mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(current_material))
+# %% save statistics results to excel
 
-    # export as sheet
-    mi_estimation_stats[current_material].reset_index().to_excel(mi_estimation_writer, sheet_name=current_material)
-
-# use global statistics for materials with score < 2
-for current_material in db_material_scores.query('score < 2').index:  # bulk edit all combinations with the global statistics, to avoid cycling through all combinations unnecessarily
-    current_selection_combined = buildings_import[['id', current_material]].copy().dropna(how='any')
-    current_selection_combined['expansion_round'] = 1
-    current_selection_combined['expansion_round']
-    mi_estimation_stats[current_material]['expand_count'] = current_selection_combined[current_material].count()
-    mi_estimation_stats[current_material]['expand_avg'] = current_selection_combined[current_material].mean()
-    mi_estimation_stats[current_material]['expand_sd'] = current_selection_combined[current_material].std()
-    mi_estimation_stats[current_material]['expand_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
-    mi_estimation_stats[current_material]['expand_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
-    mi_estimation_stats[current_material]['expand_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
-    mi_estimation_stats[current_material]['expand_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
-    mi_estimation_stats[current_material]['expand_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
-    mi_estimation_stats[current_material]['expand_rounds'] = 1
-    for current_combi in mi_estimation_stats[current_material].index:
-        mi_estimation_data[current_material][current_combi] = current_selection_combined.copy()
-    for current_combi in mi_estimation_stats[current_material].query('db_count >= 1').index:  # add perfect combinations for the few that have them
-        mi_estimation_data[current_material][current_combi] = pd.concat([current_selection_combined, buildings_import.loc[current_combi, ['id', current_material]].copy().dropna(how='any')])
-        mi_estimation_data[current_material][current_combi]['expansion_round'].fillna(0, inplace=True)
-        mi_estimation_data[current_material][current_combi]['expansion_round'] = mi_estimation_data[current_material][current_combi]['expansion_round'].astype("int")
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_count'] = mi_estimation_data[current_material][current_combi][current_material].count()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_avg'] = mi_estimation_data[current_material][current_combi][current_material].mean()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_sd'] = mi_estimation_data[current_material][current_combi][current_material].std()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_5'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_25'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.25)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_50'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.50)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_75'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.75)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_95'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.95)
-
-    # # export as individual Excel file
-    # filename = current_material + '_stop_at_' + str(stop_count) + '_' + today
-    # mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(current_material))
-
-    # export as sheet
-    # mi_estimation_stats[current_material].reset_index().to_excel(mi_estimation_writer, sheet_name=current_material)
-
-mi_estimation_writer.save()
-mi_estimation_writer.close()
+    mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(filename[:-9]))
 
 # %% analysis: summary boxplots
 
@@ -568,9 +518,7 @@ for current_material in materials:
     for key, value in mi_estimation_data[current_material].items():
         analysis_comparison_data[key + (current_material,)] = mi_estimation_data[current_material][key]
         analysis_comparison_data[key + (current_material,)] = analysis_comparison_data[key + (current_material,)].reset_index()
-        # try:
         analysis_comparison_data[key + (current_material,)] = analysis_comparison_data[key + (current_material,)].drop(['id'] + dims_names, axis=1)
-        # finally:
         analysis_comparison_data[key + (current_material,)]['combination'] = str(key)
 analysis_comparison_data = pd.concat(analysis_comparison_data)
 analysis_comparison_data['value'] = analysis_comparison_data.sum(axis=1, numeric_only=True)
@@ -579,233 +527,47 @@ analysis_comparison_data.reset_index(inplace=True)
 analysis_comparison_data.drop(materials + ['id'], axis=1, inplace=True)
 analysis_comparison_data['R5'] = analysis_comparison_data['R5_32'].str.split('_').str[0]
 
-# examples
-# sns.boxplot(data=analysis_comparison_data.loc[analysis_comparison_data['combination'] == "('RS', 'C', 'OECD_EU15')"], x='material', y='value')
-# sns.catplot(data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == "OECD_EU15"], x='material', y='value', row='use_short', col='const_short', kind="violin")
+sns.boxplot(data=analysis_comparison_data.loc[analysis_comparison_data['combination'] == "('RS', 'C', 'OECD_EU15')"], x='material', y='value')
+sns.catplot(data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == "OECD_EU15"], x='material', y='value', row='use_short', col='const_short', kind="violin")
 
-# region = "OECD_EU15"
-# boxes = sns.catplot(kind="box",
-#                     data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
-#                     hue='material', y='value',
-#                     row='const_short', row_order=dims_list_specified[1],
-#                     x='use_short', order=dims_list_specified[0],
-#                     linewidth=0.8, showfliers=False,
-#                     aspect=3, sharey=True, legend_out=False)
-# boxes.set_titles(region + ", {row_name}")
+region = "OECD_EU15"
+boxes = sns.catplot(kind="box",
+                    data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
+                    hue='material', y='value',
+                    row='const_short', row_order=dims_list_specified[1],
+                    x='use_short', order=dims_list_specified[0],
+                    linewidth=0.8, showfliers=False,
+                    aspect=3, sharey=True, legend_out=False)
+boxes.set_titles(region + ", {row_name}")
 
-# boxes = sns.catplot(kind="boxen",
-#                     data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
-#                     hue='material', y='value',
-#                     row='const_short', row_order=dims_list_specified[1],
-#                     x='use_short', order=dims_list_specified[0],
-#                     linewidth=0.8, showfliers=False,
-#                     aspect=3, sharey=True, legend_out=False, k_depth="proportion", outlier_prop=0.05)
-# boxes.set_titles(region + ", {row_name}")
+boxes = sns.catplot(kind="boxen",
+                    data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
+                    hue='material', y='value',
+                    row='const_short', row_order=dims_list_specified[1],
+                    x='use_short', order=dims_list_specified[0],
+                    linewidth=0.8, showfliers=False,
+                    aspect=3, sharey=True, legend_out=False, k_depth="proportion", outlier_prop=0.05)
+boxes.set_titles(region + ", {row_name}")
 
-# sns.catplot(kind="box",
-#             data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == "OECD_EU15"],
-#             x='material', y='value',
-#             row='use_short', row_order=dims_list_specified[0],
-#             col='const_short', col_order=dims_list_specified[1],
-#             linewidth=0.8, showfliers=False,
-#             )
+sns.catplot(kind="box",
+            data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == "OECD_EU15"],
+            x='material', y='value',
+            row='use_short', row_order=dims_list_specified[0],
+            col='const_short', col_order=dims_list_specified[1],
+            linewidth=0.8, showfliers=False,
+            )
 
-with PdfPages('postestimation_analysis\\boxplots.pdf') as pdf:
-    const_types = ['Reinforced concrete', 'Masonry', 'Steel frame', 'Timber construction']
-    use_types = ['Nonresidential', 'Multifamily', 'Single family']
+with PdfPages('MI_results\\boxplots.pdf') as pdf:
     for region in dims_list_specified[2]:
         boxes = sns.catplot(kind="box",
                             data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
-                            x='value', palette="bright", y='material',
-                            col='const_short', col_order=dims_list_specified[1],
-                            row='use_short', row_order=dims_list_specified[0],
-                            linewidth=1, showfliers=False,
-                            aspect=1.5, legend_out=False)
-        boxes.set(xlim=(0, 1750))
-        boxes.fig.subplots_adjust(top=0.95, left=0.1)
-        boxes.fig.suptitle(region, fontsize=20)
-        boxes.set_titles("")
-        # boxes.set_titles("{col_name}, {row_name}", size=20)
-        # boxes.set_axis_labels("$kg/m^2$", "", size=20)
-        boxes.despine(left=True)
-        boxes.set_yticklabels(materials, size=20)
-        for boxax in boxes.axes_dict.values():
-            boxax.tick_params(left=False)
-        for boxax in range(3):
-            boxes.axes[boxax][0].set_ylabel(use_types[boxax], size=20)
-        for boxax in range(4):
-            boxes.axes[2][boxax].set_xlabel("$kg/m^2$ \n" + const_types[boxax], size=20)
+                            hue='material', y='value',
+                            row='const_short', row_order=dims_list_specified[1],
+                            x='use_short', order=dims_list_specified[0],
+                            linewidth=0.8, showfliers=False,
+                            aspect=3, legend_out=False)
+        boxes.set_titles(region + ", {row_name}")
         pdf.savefig(boxes.fig)
-        plt.close()
-
-# %% analysis: growth of distributions by expansion round, histograms
-
-# # examples
-# current_combi = ('RS', 'T', 'ASIA_TWN')
-# current_combi = ('RM', 'T', 'OECD_EU15')
-
-# growth, growth_axes = plt.subplots(3, gridspec_kw={"height_ratios": (.1, .1, .8)})
-# growth_data = mi_estimation_data[current_material][current_combi].copy().reset_index()
-# growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
-# sns.set_palette("magma", 7)
-# sns.boxplot(data=growth_data, x=current_material,
-#             linewidth=0.8, showfliers=False,
-#             color="C" + growth_data['expansion_round'].max(),
-#             ax=growth_axes[0])
-# sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=current_material,
-#             linewidth=0.8, showfliers=False,
-#             color="C1",
-#             ax=growth_axes[1])
-# sns.histplot(data=growth_data, x=current_material,
-#              hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
-#              alpha=1, linewidth=0,
-#              stat="count", element="step",
-#              binwidth=20,
-#              ax=growth_axes[2])
-# growth_axes[0].set(yticks=[], xticks=[], xlim=(0, 700),
-#                    xlabel='after, n=' + str(growth_data.count()[0]),
-#                    title=str(current_combi)[1:-1])
-# growth_axes[1].set(yticks=[], xticks=[], xlim=(0, 700),
-#                    xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]))
-# growth_axes[2].set(xlim=(0, 700), xlabel='kg/m2 \n')
-# sns.despine(ax=growth_axes[0], left=True, bottom=True)
-# sns.despine(ax=growth_axes[1], left=True, bottom=True)
-# sns.despine(ax=growth_axes[2])
-
-
-def comparegrowth_hist(u, c, r, material, axx_before, axx_after, axx_hist, axy):
-    combi = (u, c, r)
-    outliercut = buildings_import.max()[material]
-    if material == 'steel':
-        outliercut = 200
-    elif material == 'wood':
-        outliercut = 350
-    binsize = outliercut / 17
-
-    growth_data = mi_estimation_data[material][combi].copy().reset_index()
-    growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
-
-    sns.set_palette("magma", 7)
-
-    sns.boxplot(data=growth_data, x=material,
-                linewidth=0.8, showfliers=False,
-                color="C" + growth_data['expansion_round'].max(),
-                ax=growth_axes[axx_after, axy])
-    sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=material,
-                linewidth=0.8, showfliers=False,
-                color=".6",
-                ax=growth_axes[axx_before, axy])
-    sns.histplot(data=growth_data, x=material,
-                 hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
-                 alpha=1, linewidth=0,
-                 stat="count", element="step",
-                 binwidth=binsize,
-                 ax=growth_axes[axx_hist, axy])
-
-    growth_axes[axx_after, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
-                                    xlabel='after, n=' + str(growth_data.count()[0]))
-    growth_axes[axx_before, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
-                                     xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]),
-                                     title="\n" + str(combi)[1:-1])
-    growth_axes[axx_hist, axy].set(xlim=(0, outliercut), xlabel='kg/m2 \n')
-
-    sns.despine(ax=growth_axes[axx_after, axy], left=True, bottom=True)
-    sns.despine(ax=growth_axes[axx_before, axy], left=True, bottom=True)
-    sns.despine(ax=growth_axes[axx_hist, axy])
-
-    if not(axx_hist == 2 and axy == 3):
-        growth_axes[axx_hist, axy].legend([], [], frameon=False)
-
-    return None
-
-
-for current_material in materials:
-    filename = current_material + '_stop_at_' + str(stop_count) + '_' + today
-    with PdfPages('postestimation_analysis\\' + filename + '.pdf') as pdf:
-        for region in dims_list_specified[2]:
-            growth, growth_axes = plt.subplots(9, 4, gridspec_kw={"height_ratios": (.1, .1, .8, .1, .1, .8, .1, .1, .8)}, figsize=(30, 20))
-            comparegrowth_hist("NR", "C", region, current_material, 0, 1, 2, 0)
-            comparegrowth_hist("NR", "M", region, current_material, 0, 1, 2, 1)
-            comparegrowth_hist("NR", "S", region, current_material, 0, 1, 2, 2)
-            comparegrowth_hist("NR", "T", region, current_material, 0, 1, 2, 3)
-            comparegrowth_hist("RM", "C", region, current_material, 3, 4, 5, 0)
-            comparegrowth_hist("RM", "M", region, current_material, 3, 4, 5, 1)
-            comparegrowth_hist("RM", "S", region, current_material, 3, 4, 5, 2)
-            comparegrowth_hist("RM", "T", region, current_material, 3, 4, 5, 3)
-            comparegrowth_hist("RS", "C", region, current_material, 6, 7, 8, 0)
-            comparegrowth_hist("RS", "M", region, current_material, 6, 7, 8, 1)
-            comparegrowth_hist("RS", "S", region, current_material, 6, 7, 8, 2)
-            comparegrowth_hist("RS", "T", region, current_material, 6, 7, 8, 3)
-            growth.set_constrained_layout(True)
-            pdf.savefig(growth)
-            plt.close()
-
-# %% analysis: growth of distributions by expansion round, kde
-
-# merge results data for multiple combinations manually (similar to the violin plots)
-analysis_growth = {}
-for current_material in materials:
-    analysis_growth[current_material] = {}
-    for row in mi_estimation_stats[current_material].itertuples():
-        analysis_growth[current_material][row[0]] = pd.DataFrame(data=None)
-        analysis_growth[current_material][row[0]] = mi_estimation_data[current_material][row[0]].copy().reset_index()
-        # analysis_growth[current_material][row[0]].drop_duplicates(subset="id", keep="last", inplace=True)
-        analysis_growth[current_material][row[0]]['expansion_round'] = analysis_growth[current_material][row[0]]['expansion_round'].astype("string")
-        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(combination=str(row[0]))
-        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(use=row[0][0])
-        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(construction=row[0][1])
-        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(region=row[0][2])
-
-current_combi = ('RS', 'T', 'ASIA_TWN')
-growth = sns.kdeplot(data=analysis_growth[current_material][current_combi], x=current_material,
-                     hue="expansion_round", hue_order=["4", "3", "2", "1", "0"],
-                     linewidth=0, palette="magma",
-                     bw_adjust=.2, multiple="stack")
-growth.set_xlim(left=0, right=buildings_import.max()[current_material])
-
-
-def comparegrowth_kde(u, c, r, material, axx, axy):
-    combi = (u, c, r)
-    if material == 'steel':
-        outliercut = 200
-    elif material == 'wood':
-        outliercut = 350
-    else:
-        outliercut = buildings_import.max()[material]
-    growth = sns.kdeplot(data=analysis_growth[material][combi], x=material,
-                         hue="expansion_round", hue_order=["6", "5", "4", "3", "2", "1", "0"],
-                         linewidth=0, palette="magma",
-                         bw_adjust=.2, multiple="stack",
-                         warn_singular=False,
-                         ax=growths_axs[axx, axy])
-    growth.set_ylabel("")
-    growth.set_yticks([])
-    growth.set_title(combi)
-    growth.set_xlim(left=0, right=outliercut)
-    if not(axx == 0 and axy == 3):
-        growth.legend([], [], frameon=False)
-    return growth
-
-
-for current_material in materials:
-    filename = 'kde_growth_' + current_material + '_stop_at_' + str(stop_count) + '_' + today
-    with PdfPages('postestimation_analysis\\' + filename + '.pdf') as pdf:
-        for region in dims_list_specified[2]:
-            growths, growths_axs = plt.subplots(3, 4, figsize=(30, 20))
-            comparegrowth_kde('NR', 'C', region, current_material, 0, 0)
-            comparegrowth_kde('NR', 'M', region, current_material, 0, 1)
-            comparegrowth_kde('NR', 'S', region, current_material, 0, 2)
-            comparegrowth_kde('NR', 'T', region, current_material, 0, 3)
-            comparegrowth_kde('RM', 'C', region, current_material, 1, 0)
-            comparegrowth_kde('RM', 'M', region, current_material, 1, 1)
-            comparegrowth_kde('RM', 'S', region, current_material, 1, 2)
-            comparegrowth_kde('RM', 'T', region, current_material, 1, 3)
-            comparegrowth_kde('RS', 'C', region, current_material, 2, 0)
-            comparegrowth_kde('RS', 'M', region, current_material, 2, 1)
-            comparegrowth_kde('RS', 'S', region, current_material, 2, 2)
-            comparegrowth_kde('RS', 'T', region, current_material, 2, 3)
-            pdf.savefig(growths)
-
 
 # %% analysis: before-after comparisons with violin plots
 
@@ -878,8 +640,8 @@ def compareviolin_landscape(u, c, r, material, axx, axy):
 
 
 for current_material in materials:
-    filename = current_material + '_stop_at_' + str(stop_count) + '_' + today
-    with PdfPages('postestimation_analysis\\' + filename + '.pdf') as pdf:
+    filename = current_material + '_stop_at_' + str(stop_count) + '_20200305'
+    with PdfPages('MI_results\\' + filename + '.pdf') as pdf:
         for region in dims_list_specified[2]:
             violins, violins_axs = plt.subplots(3, 4, figsize=(30, 20))
             compareviolin_landscape('NR', 'C', region, current_material, 0, 0)
@@ -895,6 +657,176 @@ for current_material in materials:
             compareviolin_landscape('RS', 'S', region, current_material, 2, 2)
             compareviolin_landscape('RS', 'T', region, current_material, 2, 3)
             pdf.savefig(violins)
+
+
+# %% analysis: growth of distributions by expansion round, histograms
+
+current_combi = ('RS', 'T', 'ASIA_TWN')
+current_combi = ('RM', 'T', 'OECD_EU15')
+
+growth, growth_axes = plt.subplots(3, gridspec_kw={"height_ratios": (.1, .1, .8)})
+growth_data = mi_estimation_data[current_material][current_combi].copy().reset_index()
+growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
+sns.set_palette("magma", 7)
+sns.boxplot(data=growth_data, x=current_material,
+            linewidth=0.8, showfliers=False,
+            color="C" + growth_data['expansion_round'].max(),
+            ax=growth_axes[0])
+sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=current_material,
+            linewidth=0.8, showfliers=False,
+            color="C1",
+            ax=growth_axes[1])
+sns.histplot(data=growth_data, x=current_material,
+             hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
+             alpha=1, linewidth=0,
+             stat="count", element="step",
+             binwidth=20,
+             ax=growth_axes[2])
+growth_axes[0].set(yticks=[], xticks=[], xlim=(0, 700),
+                   xlabel='after, n=' + str(growth_data.count()[0]),
+                   title=str(current_combi)[1:-1])
+growth_axes[1].set(yticks=[], xticks=[], xlim=(0, 700),
+                   xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]))
+growth_axes[2].set(xlim=(0, 700), xlabel='kg/m2 \n')
+sns.despine(ax=growth_axes[0], left=True, bottom=True)
+sns.despine(ax=growth_axes[1], left=True, bottom=True)
+sns.despine(ax=growth_axes[2])
+
+
+def comparegrowth_hist(u, c, r, material, axx_before, axx_after, axx_hist, axy):
+    combi = (u, c, r)
+    if material == 'steel':
+        outliercut = 200
+        binsize = 15
+    elif material == 'wood':
+        outliercut = 350
+        binsize = 20
+    else:
+        outliercut = buildings_import.max()[material]
+        binsize = 75
+
+    growth_data = mi_estimation_data[material][combi].copy().reset_index()
+    growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
+
+    sns.set_palette("magma", 7)
+
+    sns.boxplot(data=growth_data, x=material,
+                linewidth=0.8, showfliers=False,
+                color="C" + growth_data['expansion_round'].max(),
+                ax=growth_axes[axx_after, axy])
+    sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=material,
+                linewidth=0.8, showfliers=False,
+                color=".6",
+                ax=growth_axes[axx_before, axy])
+    sns.histplot(data=growth_data, x=material,
+                 hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
+                 alpha=1, linewidth=0,
+                 stat="count", element="step",
+                 binwidth=binsize,
+                 ax=growth_axes[axx_hist, axy])
+
+    growth_axes[axx_after, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
+                                    xlabel='after, n=' + str(growth_data.count()[0]))
+    growth_axes[axx_before, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
+                                     xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]),
+                                     title="\n" + str(combi)[1:-1])
+    growth_axes[axx_hist, axy].set(xlim=(0, outliercut), xlabel='kg/m2 \n')
+
+    sns.despine(ax=growth_axes[axx_after, axy], left=True, bottom=True)
+    sns.despine(ax=growth_axes[axx_before, axy], left=True, bottom=True)
+    sns.despine(ax=growth_axes[axx_hist, axy])
+
+    if not(axx_hist == 2 and axy == 3):
+        growth_axes[axx_hist, axy].legend([], [], frameon=False)
+
+    return None
+
+
+for current_material in materials:
+    filename = current_material + '_stop_at_' + str(stop_count) + '_20200317'
+    with PdfPages('MI_results\\' + filename + '.pdf') as pdf:
+        for region in dims_list_specified[2]:
+            growth, growth_axes = plt.subplots(9, 4, gridspec_kw={"height_ratios": (.1, .1, .8, .1, .1, .8, .1, .1, .8)}, figsize=(30, 20))
+            comparegrowth_hist("NR", "C", region, current_material, 0, 1, 2, 0)
+            comparegrowth_hist("NR", "M", region, current_material, 0, 1, 2, 1)
+            comparegrowth_hist("NR", "S", region, current_material, 0, 1, 2, 2)
+            comparegrowth_hist("NR", "T", region, current_material, 0, 1, 2, 3)
+            comparegrowth_hist("RM", "C", region, current_material, 3, 4, 5, 0)
+            comparegrowth_hist("RM", "M", region, current_material, 3, 4, 5, 1)
+            comparegrowth_hist("RM", "S", region, current_material, 3, 4, 5, 2)
+            comparegrowth_hist("RM", "T", region, current_material, 3, 4, 5, 3)
+            comparegrowth_hist("RS", "C", region, current_material, 6, 7, 8, 0)
+            comparegrowth_hist("RS", "M", region, current_material, 6, 7, 8, 1)
+            comparegrowth_hist("RS", "S", region, current_material, 6, 7, 8, 2)
+            comparegrowth_hist("RS", "T", region, current_material, 6, 7, 8, 3)
+            growth.set_constrained_layout(True)
+            pdf.savefig(growth)
+
+# %% analysis: growth of distributions by expansion round, kde
+
+# merge results data for multiple combinations manually (similar to the violin plots)
+analysis_growth = {}
+for current_material in materials:
+    analysis_growth[current_material] = {}
+    for row in mi_estimation_stats[current_material].itertuples():
+        analysis_growth[current_material][row[0]] = pd.DataFrame(data=None)
+        analysis_growth[current_material][row[0]] = mi_estimation_data[current_material][row[0]].copy().reset_index()
+        # analysis_growth[current_material][row[0]].drop_duplicates(subset="id", keep="last", inplace=True)
+        analysis_growth[current_material][row[0]]['expansion_round'] = analysis_growth[current_material][row[0]]['expansion_round'].astype("string")
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(combination=str(row[0]))
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(use=row[0][0])
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(construction=row[0][1])
+        analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(region=row[0][2])
+
+current_combi = ('RS', 'T', 'ASIA_TWN')
+growth = sns.kdeplot(data=analysis_growth[current_material][current_combi], x=current_material,
+                     hue="expansion_round", hue_order=["4", "3", "2", "1", "0"],
+                     linewidth=0, palette="magma",
+                     bw_adjust=.2, multiple="stack")
+growth.set_xlim(left=0, right=buildings_import.max()[current_material])
+
+
+def comparegrowth_kde(u, c, r, material, axx, axy):
+    combi = (u, c, r)
+    if material == 'steel':
+        outliercut = 200
+    elif material == 'wood':
+        outliercut = 350
+    else:
+        outliercut = buildings_import.max()[material]
+    growth = sns.kdeplot(data=analysis_growth[material][combi], x=material,
+                         hue="expansion_round", hue_order=["6", "5", "4", "3", "2", "1", "0"],
+                         linewidth=0, palette="magma",
+                         bw_adjust=.2, multiple="stack",
+                         warn_singular=False,
+                         ax=growths_axs[axx, axy])
+    growth.set_ylabel("")
+    growth.set_yticks([])
+    growth.set_title(combi)
+    growth.set_xlim(left=0, right=outliercut)
+    if not(axx == 0 and axy == 3):
+        growth.legend([], [], frameon=False)
+    return growth
+
+
+for current_material in materials:
+    filename = 'kde_growth_' + current_material + '_stop_at_' + str(stop_count) + '_20200317'
+    with PdfPages('MI_results\\' + filename + '.pdf') as pdf:
+        for region in dims_list_specified[2]:
+            growths, growths_axs = plt.subplots(3, 4, figsize=(30, 20))
+            comparegrowth_kde('NR', 'C', region, current_material, 0, 0)
+            comparegrowth_kde('NR', 'M', region, current_material, 0, 1)
+            comparegrowth_kde('NR', 'S', region, current_material, 0, 2)
+            comparegrowth_kde('NR', 'T', region, current_material, 0, 3)
+            comparegrowth_kde('RM', 'C', region, current_material, 1, 0)
+            comparegrowth_kde('RM', 'M', region, current_material, 1, 1)
+            comparegrowth_kde('RM', 'S', region, current_material, 1, 2)
+            comparegrowth_kde('RM', 'T', region, current_material, 1, 3)
+            comparegrowth_kde('RS', 'C', region, current_material, 2, 0)
+            comparegrowth_kde('RS', 'M', region, current_material, 2, 1)
+            comparegrowth_kde('RS', 'S', region, current_material, 2, 2)
+            comparegrowth_kde('RS', 'T', region, current_material, 2, 3)
+            pdf.savefig(growths)
 
 
 # %% further analysis
