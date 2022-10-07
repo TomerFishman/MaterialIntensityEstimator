@@ -3,8 +3,10 @@
 Created on Thu Dec 10 13:42:14 2020
 
 @author: Tomer Fishman
+
+The buildings material intensity estimator
 """
-# %% libraries and load dimensions
+# %% load libraries and load dimensions
 
 from os import chdir
 import pandas as pd
@@ -39,7 +41,7 @@ dims_list[0] = dims_list[0][1:]
 
 materials = ['concrete', 'brick', 'wood', 'steel', 'glass', 'plastics', 'aluminum', 'copper']
 
-# %% load the MI database with const. type ML results from Orange
+# %% load the MI database with constrcution type ML results from Orange
 
 buildings_import = pd.read_excel("data_input_and_ml_processing\\buildings_v2-const_type_ML.xlsx", sheet_name="Sheet1")
 
@@ -54,7 +56,7 @@ buildings_import = buildings_import[['id'] + materials + dims_names]
 
 # %% EDA: database plots
 
-buildings_import.reset_index(inplace=True)
+# buildings_import.reset_index(inplace=True)
 
 # SSP 5 regions
 buildings_import['R5'] = buildings_import['R5_32'].str.split('_').str[0]
@@ -245,6 +247,9 @@ buildings_import.set_index(dims_names, inplace=True)
 # sort to make pandas faster and with less warnings
 buildings_import.sort_index(inplace=True)
 
+# export buildings_import to Excel file
+buildings_import.to_excel("db_analysis\\Buildings_import_" + today + ".xlsx", merge_cells=False)
+
 
 # %% create a new dataframe of the counts of unique combinations that exist in the DB
 # including unspecifieds
@@ -293,7 +298,7 @@ for current_material in materials:
             if (len(pairwise_ind_data) > 2 and len(pairwise_col_data) > 2):
                 pairwise_ks_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.ks_2samp(pairwise_ind_data, pairwise_col_data)[1]  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets do not come from the same distribution.
                 pairwise_kw_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.kruskal(pairwise_ind_data, pairwise_col_data)[1]  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets have different medians.
-                pairwise_ands_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.anderson_ksamp([pairwise_ind_data, pairwise_col_data])[-1]  # works only when n>=2. If p < 0.05 we reject the null hypothesis. Hence the two sets do not come from the same distribution.
+                # pairwise_ands_p.loc[pairwise_ind_combi, pairwise_col_combi] = stats.anderson_ksamp([pairwise_ind_data, pairwise_col_data])[-1]  # works only when n>=2. If p < 0.05 we reject the null hypothesis. Hence the two sets do not come from the same distribution.
         pairwise_col_count = pairwise_col_count + 1
 
     pairwise_ks_p.dropna(how="all", inplace=True)
@@ -302,12 +307,12 @@ for current_material in materials:
     pairwise_kw_p.dropna(how="all", inplace=True)
     pairwise_kw_p.dropna(axis='columns', how="all", inplace=True)
 
-    pairwise_ands_p.dropna(how="all", inplace=True)
-    pairwise_ands_p.dropna(axis='columns', how="all", inplace=True)
+    # pairwise_ands_p.dropna(how="all", inplace=True)
+    # pairwise_ands_p.dropna(axis='columns', how="all", inplace=True)
 
     pairwise_ks_p.T.to_excel(pairwise_writer, sheet_name=current_material + "_ks", merge_cells=False)
     pairwise_kw_p.T.to_excel(pairwise_writer, sheet_name=current_material + "_kw", merge_cells=False)
-    pairwise_ands_p.T.to_excel(pairwise_writer, sheet_name=current_material + "_ands", merge_cells=False)
+    # pairwise_ands_p.T.to_excel(pairwise_writer, sheet_name=current_material + "_ands", merge_cells=False)
     # # export pairwise matrices as individual Excel files
     # pairwise_ks_p.to_excel("db_analysis\\" + current_material + "_pairwise_ks_p.xlsx", merge_cells=False)
     # pairwise_kw_p.to_excel("db_analysis\\" + current_material + "_pairwise_kw_p.xlsx", merge_cells=False)
@@ -321,11 +326,10 @@ for current_material in materials:
     pairwise_long['tests_over_0.05_ie_same_dists'] = 0
     pairwise_long.loc[pairwise_long['Kolmogorov_Smirnov_test'] > 0.05, 'tests_over_0.05_ie_same_dists'] += 1
     pairwise_long.loc[pairwise_long['Kruskal_Wallis_H_test'] > 0.05, 'tests_over_0.05_ie_same_dists'] += 1
-    pairwise_long.loc[pairwise_long['k_sample_Anderson_Darling_test'] > 0.05, 'tests_over_0.05_ie_same_dists'] += 1
+    # pairwise_long.loc[pairwise_long['k_sample_Anderson_Darling_test'] > 0.05, 'tests_over_0.05_ie_same_dists'] += 1
     pairwise_long.to_excel(pairwise_writer, sheet_name=current_material + "_summary", merge_cells=False)
     # pairwise_long.to_excel("db_analysis\\" + current_material + "_nonparametric_tests.xlsx", merge_cells=False)  # export as individual Excel file
 
-pairwise_writer.save()
 pairwise_writer.close()
 
 # visualize cumulative distributions (what the Kolmogorov-Smirnov test does)
@@ -375,19 +379,20 @@ mi_estimation_stats = {}
 for current_material in materials:
     mi_estimation_data[current_material] = {}
     mi_estimation_stats[current_material] = pd.DataFrame(data=None, index=pd.MultiIndex.from_product(dims_list_specified, names=dims_names),
-                                                         columns=['R5', 'db_count', 'db_avg', 'db_sd', 'db_5', 'db_25', 'db_50', 'db_75', 'db_95',
-                                                                  'expand_count', 'expand_avg', 'expand_sd', 'expand_5', 'expand_25', 'expand_50', 'expand_75', 'expand_95', 'expand_rounds'])  # , 'p1', 'p5', 'p10', 'p20', 'p25', 'p30', 'p40', 'p50', 'p60', 'p70', 'p75', 'p80', 'p90', 'p95', 'p99'
+                                                         columns=['R5', 'original_db_count', 'expansion_rounds', 'expanded_count',
+                                                                  'expanded_0', 'expanded_5', 'expanded_25', 'expanded_50', 'expanded_75', 'expanded_95', 'expanded_100'])
     mi_estimation_stats[current_material] = mi_estimation_stats[current_material].reset_index()
     mi_estimation_stats[current_material]['R5'] = mi_estimation_stats[current_material]['R5_32'].str.split('_').str[0]  # SSP 5 regions
     mi_estimation_stats[current_material] = mi_estimation_stats[current_material].set_index(['use_short', 'const_short', 'R5_32'])
-    mi_estimation_stats[current_material]['db_count'] = db_combinations_stats[('count', current_material)]
-    mi_estimation_stats[current_material]['db_avg'] = db_combinations_stats[('avg', current_material)]
-    mi_estimation_stats[current_material]['db_sd'] = db_combinations_stats[('sd', current_material)]
-    mi_estimation_stats[current_material]['db_5'] = db_combinations_stats[('p5', current_material)]
-    mi_estimation_stats[current_material]['db_25'] = db_combinations_stats[('p25', current_material)]
-    mi_estimation_stats[current_material]['db_50'] = db_combinations_stats[('p50', current_material)]
-    mi_estimation_stats[current_material]['db_75'] = db_combinations_stats[('p75', current_material)]
-    mi_estimation_stats[current_material]['db_95'] = db_combinations_stats[('p95', current_material)]
+    mi_estimation_stats[current_material]['original_db_count'] = db_combinations_stats[('count', current_material)]
+    mi_estimation_stats[current_material]['original_db_count'].fillna(0, inplace=True)
+    # mi_estimation_stats[current_material]['db_avg'] = db_combinations_stats[('avg', current_material)]
+    # mi_estimation_stats[current_material]['db_sd'] = db_combinations_stats[('sd', current_material)]
+    # mi_estimation_stats[current_material]['db_5'] = db_combinations_stats[('p5', current_material)]
+    # mi_estimation_stats[current_material]['db_25'] = db_combinations_stats[('p25', current_material)]
+    # mi_estimation_stats[current_material]['db_50'] = db_combinations_stats[('p50', current_material)]
+    # mi_estimation_stats[current_material]['db_75'] = db_combinations_stats[('p75', current_material)]
+    # mi_estimation_stats[current_material]['db_95'] = db_combinations_stats[('p95', current_material)]
 
 # %% calculate scores for materials' coverage
 # to decide whether to use the selection algorithm or global statistics
@@ -426,11 +431,11 @@ def expand_selection(selection, count, condition, material):
     return selection, count
 
 
-mi_estimation_writer = pd.ExcelWriter('MI_results\\stop_at_' + str(stop_count) + '_' + today + ".xlsx", engine='openpyxl')
+mi_estimation_writer = pd.ExcelWriter('MI_results\\MI_ranges_' + today + ".xlsx", engine='openpyxl')
 
 # expand selection algorithm for materials with score >= 2
 for current_material in db_material_scores.query('score >= 2').index:
-    mi_estimation_stats[current_material] = mi_estimation_stats[current_material].sort_values(by="db_count", ascending=False)
+    mi_estimation_stats[current_material] = mi_estimation_stats[current_material].sort_values(by="original_db_count", ascending=False)
 
     for current_combi in mi_estimation_stats[current_material].index:  # running index for the current combination in mi_estimation
         print(current_material + str(current_combi))
@@ -488,30 +493,26 @@ for current_material in db_material_scores.query('score >= 2').index:
 
         # When done: concatenate current_selection into one dataframe, including repetition of selections from previous expansion rounds i.e. v[3] in the second for loop
         current_selection_combined = pd.concat([v[1] for v in current_selection for i in range(v[3])], copy=True).loc[:, ['id', current_material]].dropna()
-        current_selection_combined['expansion_round'] = current_selection_combined.groupby('id').cumcount()
-        current_selection_combined['expansion_round'] = current_selection_combined['expansion_round'].max() - current_selection_combined['expansion_round']
+        current_selection_combined['expansion_rounds'] = current_selection_combined.groupby('id').cumcount()
+        current_selection_combined['expansion_rounds'] = current_selection_combined['expansion_rounds'].max() - current_selection_combined['expansion_rounds']
         if current_combi not in current_selection_combined.index:
-            current_selection_combined['expansion_round'] += 1
+            current_selection_combined['expansion_rounds'] += 1
         # fill results into mi_estimation_stats 'expanded_count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95', 'expansion_rounds'
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_count'] = current_count
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_avg'] = current_selection_combined[current_material].mean()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_sd'] = current_selection_combined[current_material].std()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_rounds'] = current_selection[0][3]
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_count'] = current_count
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_0'] = np.quantile(current_selection_combined[current_material], q=0.00)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_100'] = np.quantile(current_selection_combined[current_material], q=1.00)
+        mi_estimation_stats[current_material].loc[current_combi, 'expansion_rounds'] = current_selection[0][3]
 
         # save current_selection_combined for backup and reference
         mi_estimation_data[current_material][current_combi] = current_selection_combined.copy()
 
-    # HINT cosmetic: resort by index
+    # re-sort by index
     mi_estimation_stats[current_material].sort_index(inplace=True)
-
-    # # export as individual Excel file
-    # filename = current_material + '_stop_at_' + str(stop_count) + '_' + today
-    # mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(current_material))
 
     # export as sheet
     mi_estimation_stats[current_material].reset_index().to_excel(mi_estimation_writer, sheet_name=current_material)
@@ -519,42 +520,42 @@ for current_material in db_material_scores.query('score >= 2').index:
 # use global statistics for materials with score < 2
 for current_material in db_material_scores.query('score < 2').index:  # bulk edit all combinations with the global statistics, to avoid cycling through all combinations unnecessarily
     current_selection_combined = buildings_import[['id', current_material]].copy().dropna(how='any')
-    current_selection_combined['expansion_round'] = 1
-    mi_estimation_stats[current_material]['expand_count'] = current_selection_combined[current_material].count()
-    mi_estimation_stats[current_material]['expand_avg'] = current_selection_combined[current_material].mean()
-    mi_estimation_stats[current_material]['expand_sd'] = current_selection_combined[current_material].std()
-    mi_estimation_stats[current_material]['expand_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
-    mi_estimation_stats[current_material]['expand_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
-    mi_estimation_stats[current_material]['expand_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
-    mi_estimation_stats[current_material]['expand_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
-    mi_estimation_stats[current_material]['expand_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
-    mi_estimation_stats[current_material]['expand_rounds'] = 1
+    mi_estimation_stats[current_material]['expansion_rounds'] = 1
+    mi_estimation_stats[current_material]['expanded_count'] = current_selection_combined[current_material].count()
+    mi_estimation_stats[current_material]['expanded_0'] = np.quantile(current_selection_combined[current_material], q=0.00)
+    mi_estimation_stats[current_material]['expanded_5'] = np.quantile(current_selection_combined[current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
+    mi_estimation_stats[current_material]['expanded_25'] = np.quantile(current_selection_combined[current_material], q=0.25)
+    mi_estimation_stats[current_material]['expanded_50'] = np.quantile(current_selection_combined[current_material], q=0.50)
+    mi_estimation_stats[current_material]['expanded_75'] = np.quantile(current_selection_combined[current_material], q=0.75)
+    mi_estimation_stats[current_material]['expanded_95'] = np.quantile(current_selection_combined[current_material], q=0.95)
+    mi_estimation_stats[current_material]['expanded_100'] = np.quantile(current_selection_combined[current_material], q=1.00)
     for current_combi in mi_estimation_stats[current_material].index:
         mi_estimation_data[current_material][current_combi] = current_selection_combined.copy()
         print(current_material + str(current_combi))
-    # add perfect combinations for the few that have them, to give them some weight
-    for current_combi in mi_estimation_stats[current_material].query('db_count >= 1').index:
+    # add perfect combinations for the few that have them, to give them some weight, and rerun the statistics
+    for current_combi in mi_estimation_stats[current_material].query('original_db_count >= 1').index:
         mi_estimation_data[current_material][current_combi] = pd.concat([current_selection_combined, buildings_import.loc[current_combi, ['id', current_material]].copy().dropna(how='any')])
-        mi_estimation_data[current_material][current_combi]['expansion_round'].fillna(0, inplace=True)  # backfill the perfect combinations as expansion round 0
-        mi_estimation_data[current_material][current_combi]['expansion_round'] = mi_estimation_data[current_material][current_combi]['expansion_round'].astype("int")
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_count'] = mi_estimation_data[current_material][current_combi][current_material].count()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_avg'] = mi_estimation_data[current_material][current_combi][current_material].mean()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_sd'] = mi_estimation_data[current_material][current_combi][current_material].std()
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_5'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_25'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.25)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_50'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.50)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_75'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.75)
-        mi_estimation_stats[current_material].loc[current_combi, 'expand_95'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.95)
-
-    # # export as individual Excel file
-    # filename = current_material + '_stop_at_' + str(stop_count) + '_' + today
-    # mi_estimation_stats[current_material].reset_index().to_excel('MI_results\\' + filename + '.xlsx', sheet_name=(current_material))
-
+        mi_estimation_stats[current_material].loc[current_combi, 'expansion_rounds'] += 1
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_count'] = mi_estimation_data[current_material][current_combi][current_material].count()
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_0'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.00)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_5'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_25'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.25)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_50'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.50)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_75'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.75)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_95'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.95)
+        mi_estimation_stats[current_material].loc[current_combi, 'expanded_100'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=1.00)
     # export as sheet
     mi_estimation_stats[current_material].reset_index().to_excel(mi_estimation_writer, sheet_name=current_material)
-
-mi_estimation_writer.save()
 mi_estimation_writer.close()
+
+
+mi_data_writer = pd.ExcelWriter('MI_results\\MI_data_' + today + ".xlsx", engine='openpyxl')
+for current_material in materials:
+    pd.concat([mi_estimation_data[current_material][current_combi].reset_index()
+               for current_combi in mi_estimation_data[current_material].keys()],
+              axis=0,
+              keys=list(mi_estimation_data[current_material].keys())).sort_index().to_excel(mi_data_writer, sheet_name=current_material)
+mi_data_writer.close()
 
 # %% analysis: summary boxplots
 
@@ -568,9 +569,7 @@ for current_material in materials:
     for key, value in mi_estimation_data[current_material].items():
         analysis_comparison_data[key + (current_material,)] = mi_estimation_data[current_material][key]
         analysis_comparison_data[key + (current_material,)] = analysis_comparison_data[key + (current_material,)].reset_index()
-        # try:
         analysis_comparison_data[key + (current_material,)] = analysis_comparison_data[key + (current_material,)].drop(['id'] + dims_names, axis=1)
-        # finally:
         analysis_comparison_data[key + (current_material,)]['combination'] = str(key)
 analysis_comparison_data = pd.concat(analysis_comparison_data)
 analysis_comparison_data['value'] = analysis_comparison_data.sum(axis=1, numeric_only=True)
@@ -639,49 +638,84 @@ analysis_comparison_data['R5'] = analysis_comparison_data['R5_32'].str.split('_'
 #         pdf.savefig(boxes.fig)
 #         plt.close()
 
-# by region as page, consttype as rows, usetype as columns, materials in plot
-with PdfPages('postestimation_analysis\\boxplots_' + str(stop_count) + '_' + today + '.pdf') as pdf:
-    const_types = ['Reinforced concrete', 'Masonry', 'Steel frame', 'Timber construction']
-    use_types = ['Nonresidential', 'Multifamily', 'Single family']
-    for region in dims_list_specified[2]:
-        boxes = sns.catplot(kind="box",
-                            data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
-                            x='value', y='material', palette="bright",
-                            row='const_short', row_order=dims_list_specified[1],
-                            col='use_short', col_order=dims_list_specified[0],
-                            linewidth=1, showfliers=False,
-                            aspect=1.5, legend_out=False)
-        boxes.set(xlim=(0, 1750))
-        boxes.fig.subplots_adjust(top=0.95, left=0.1, bottom=0.1)
-        boxes.fig.suptitle(region, fontsize=20)
-        boxes.set_titles("")
-        # boxes.set_titles("{col_name}, {row_name}", size=20)
-        # boxes.set_axis_labels("$kg/m^2$", "", size=20)
-        boxes.despine(left=True)
-        boxes.set_yticklabels(materials, size=20)
-        for boxax in boxes.axes_dict.values():
-            boxax.tick_params(left=False)
-        for boxax in range(4):
-            boxes.axes[boxax][0].set_ylabel(const_types[boxax], size=20)
-        for boxax in range(3):
-            boxes.axes[2][boxax].set_xlabel("$kg/m^2$ \n" + use_types[boxax], size=20)
-        pdf.savefig(boxes.fig)
-        plt.close()
+# # by region as page, consttype as rows, usetype as columns, materials in plot
+# with PdfPages('postestimation_analysis\\boxplots_' + str(stop_count) + '_' + today + '.pdf') as pdf:
+#     const_types = ['Reinforced concrete', 'Masonry', 'Steel frame', 'Timber construction']
+#     use_types = ['Nonresidential', 'Multifamily', 'Single family']
+#     for region in dims_list_specified[2]:
+#         boxes = sns.catplot(kind="box",
+#                             data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
+#                             x='value', y='material', palette="bright",
+#                             row='const_short', row_order=dims_list_specified[1],
+#                             col='use_short', col_order=dims_list_specified[0],
+#                             linewidth=1, showfliers=False,
+#                             aspect=1.5, legend_out=False)
+#         boxes.set(xlim=(0, 1750))
+#         boxes.fig.subplots_adjust(top=0.95, left=0.1, bottom=0.1)
+#         boxes.fig.suptitle(region, fontsize=20)
+#         boxes.set_titles("")
+#         # boxes.set_titles("{col_name}, {row_name}", size=20)
+#         # boxes.set_axis_labels("$kg/m^2$", "", size=20)
+#         boxes.despine(left=True)
+#         boxes.set_yticklabels(materials, size=20)
+#         for boxax in boxes.axes_dict.values():
+#             boxax.tick_params(left=False)
+#         for boxax in range(4):
+#             boxes.axes[boxax][0].set_ylabel(const_types[boxax], size=20)
+#         for boxax in range(3):
+#             boxes.axes[2][boxax].set_xlabel("$kg/m^2$ \n" + use_types[boxax], size=20)
+#         pdf.savefig(boxes.fig)
+#         plt.close()
 
-# by region as page, usetype as rows, materials as columns, consttype in plot
+# # boxplot by region as page, usetype as rows, materials as columns, consttype in plot
+# with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' + today + '.pdf') as pdf:
+#     const_types = ['Reinforced concrete', 'Masonry construction', 'Timber construction', 'Steel frame']
+#     use_types = ['Nonresidential', 'Multifamily', 'Single family']
+#     for region in dims_list_specified[2]:
+#         boxes = sns.catplot(kind="box",
+#                             data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
+#                             y='const_short', order=['C', 'M', 'T', 'S'], palette="deep",
+#                             x='value', sharex=False,
+#                             col='material', col_order=materials,
+#                             row='use_short', row_order=dims_list_specified[0],
+#                             linewidth=0.5, showfliers=False,
+#                             medianprops=dict(color="white", linewidth=2, alpha=0.9), whis=(5, 95),
+#                             showmeans=True, meanprops=dict(marker='o', markerfacecolor="white", markeredgecolor='0.6'),
+#                             aspect=0.8, legend_out=False)
+#         boxes.fig.subplots_adjust(top=0.95, left=0.1, bottom=0.1)
+#         boxes.fig.suptitle(region, fontsize=20)
+#         boxes.set_titles("")
+#         boxes.despine(left=True)
+#         boxes.set_yticklabels(const_types, size=15)
+#         for boxax in boxes.axes_dict.values():
+#             boxax.tick_params(left=False)
+#         for boxax in range(3):
+#             boxes.axes[boxax][0].set_ylabel(use_types[boxax], size=20)
+#             boxes.axes[boxax][0].set(xlim=(0, 1700))
+#             boxes.axes[boxax][1].set(xlim=(0, 1700))
+#             boxes.axes[boxax][2].set(xlim=(0, 400))
+#             boxes.axes[boxax][3].set(xlim=(0, 400))
+#             boxes.axes[boxax][4].set(xlim=(0, 20))
+#             boxes.axes[boxax][5].set(xlim=(0, 20))
+#             boxes.axes[boxax][6].set(xlim=(0, 10))
+#             boxes.axes[boxax][7].set(xlim=(0, 10))
+#         for boxax in range(8):
+#             boxes.axes[2][boxax].set_xlabel(materials[boxax] + "\n $kg/m^2$ ", size=20)
+#         pdf.savefig(boxes.fig)
+#         plt.close()
+
+# boxen by region as page, usetype as rows, materials as columns, consttype in plot
 with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' + today + '.pdf') as pdf:
     const_types = ['Reinforced concrete', 'Masonry construction', 'Timber construction', 'Steel frame']
     use_types = ['Nonresidential', 'Multifamily', 'Single family']
     for region in dims_list_specified[2]:
-        boxes = sns.catplot(kind="box",
+        boxes = sns.catplot(kind="boxen", k_depth=3, scale="linear", saturation=0.75,
                             data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
                             y='const_short', order=['C', 'M', 'T', 'S'], palette="deep",
                             x='value', sharex=False,
                             col='material', col_order=materials,
                             row='use_short', row_order=dims_list_specified[0],
-                            linewidth=0.5, showfliers=False,
-                            medianprops=dict(color="white", linewidth=2, alpha=0.9), whis=(5, 95),
-                            showmeans=True, meanprops=dict(marker='o', markerfacecolor="white", markeredgecolor='0.6'),
+                            linewidth=0.0, showfliers=False,
                             aspect=0.8, legend_out=False)
         boxes.fig.subplots_adjust(top=0.95, left=0.1, bottom=0.1)
         boxes.fig.suptitle(region, fontsize=20)
@@ -690,6 +724,8 @@ with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' +
         boxes.set_yticklabels(const_types, size=15)
         for boxax in boxes.axes_dict.values():
             boxax.tick_params(left=False)
+            for line in boxax.get_lines():
+                line.set(color='white', linewidth=1.5, alpha=1)  # https://ourpython.com/python/how-to-change-the-colour-a-boxplot-line-in-seaborn
         for boxax in range(3):
             boxes.axes[boxax][0].set_ylabel(use_types[boxax], size=20)
             boxes.axes[boxax][0].set(xlim=(0, 1700))
@@ -704,7 +740,6 @@ with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' +
             boxes.axes[2][boxax].set_xlabel(materials[boxax] + "\n $kg/m^2$ ", size=20)
         pdf.savefig(boxes.fig)
         plt.close()
-
 
 # # by region as page, materials as rows, usetype as columns, consttype in plot
 # with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' + today + '.pdf') as pdf:
@@ -776,18 +811,18 @@ with PdfPages('postestimation_analysis\\boxplots_materials_' + str(stop_count) +
 
 # growth, growth_axes = plt.subplots(3, gridspec_kw={"height_ratios": (.1, .1, .8)})
 # growth_data = mi_estimation_data[current_material][current_combi].copy().reset_index()
-# growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
+# growth_data['expansion_rounds'] = growth_data['expansion_rounds'].astype("string")
 # sns.set_palette("magma", 7)
 # sns.boxplot(data=growth_data, x=current_material,
 #             linewidth=0.8, showfliers=False,
-#             color="C" + growth_data['expansion_round'].max(),
+#             color="C" + growth_data['expansion_rounds'].max(),
 #             ax=growth_axes[0])
-# sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=current_material,
+# sns.boxplot(data=growth_data.query('expansion_rounds == "0"'), x=current_material,
 #             linewidth=0.8, showfliers=False,
 #             color="C1",
 #             ax=growth_axes[1])
 # sns.histplot(data=growth_data, x=current_material,
-#              hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
+#              hue="expansion_rounds", hue_order=["0", "1", "2", "3", "4", "5", "6"],
 #              alpha=1, linewidth=0,
 #              stat="count", element="step",
 #              binwidth=20,
@@ -796,7 +831,7 @@ with PdfPages('postestimation_analysis\\boxplots_materials_' + str(stop_count) +
 #                    xlabel='after, n=' + str(growth_data.count()[0]),
 #                    title=str(current_combi)[1:-1])
 # growth_axes[1].set(yticks=[], xticks=[], xlim=(0, 700),
-#                    xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]))
+#                    xlabel='before, n=' + str(growth_data.query('expansion_rounds == "0"').count()[0]))
 # growth_axes[2].set(xlim=(0, 700), xlabel='kg/m2 \n')
 # sns.despine(ax=growth_axes[0], left=True, bottom=True)
 # sns.despine(ax=growth_axes[1], left=True, bottom=True)
@@ -813,20 +848,20 @@ def comparegrowth_hist(u, c, r, material, axx_before, axx_after, axx_hist, axy):
     binsize = outliercut / 17
 
     growth_data = mi_estimation_data[material][combi].copy().reset_index()
-    growth_data['expansion_round'] = growth_data['expansion_round'].astype("string")
+    growth_data['expansion_rounds'] = growth_data['expansion_rounds'].astype("string")
 
     sns.set_palette("magma", 7)
 
     sns.boxplot(data=growth_data, x=material,
                 linewidth=0.8, showfliers=False,
-                color="C" + growth_data['expansion_round'].max(),
+                color="C" + growth_data['expansion_rounds'].max(),
                 ax=growth_axes[axx_after, axy])
-    sns.boxplot(data=growth_data.query('expansion_round == "0"'), x=material,
+    sns.boxplot(data=growth_data.query('expansion_rounds == "0"'), x=material,
                 linewidth=0.8, showfliers=False,
                 color=".6",
                 ax=growth_axes[axx_before, axy])
     sns.histplot(data=growth_data, x=material,
-                 hue="expansion_round", hue_order=["0", "1", "2", "3", "4", "5", "6"],
+                 hue="expansion_rounds", hue_order=["0", "1", "2", "3", "4", "5", "6"],
                  alpha=1, linewidth=0,
                  stat="count", element="step",
                  binwidth=binsize,
@@ -835,7 +870,7 @@ def comparegrowth_hist(u, c, r, material, axx_before, axx_after, axx_hist, axy):
     growth_axes[axx_after, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
                                     xlabel='after, n=' + str(growth_data.count()[0]))
     growth_axes[axx_before, axy].set(yticks=[], xticks=[], xlim=(0, outliercut),
-                                     xlabel='before, n=' + str(growth_data.query('expansion_round == "0"').count()[0]),
+                                     xlabel='before, n=' + str(growth_data.query('expansion_rounds == "0"').count()[0]),
                                      title="\n" + str(combi)[1:-1])
     growth_axes[axx_hist, axy].set(xlim=(0, outliercut), xlabel='kg/m2 \n')
 
@@ -880,7 +915,7 @@ for current_material in materials:
         analysis_growth[current_material][row[0]] = pd.DataFrame(data=None)
         analysis_growth[current_material][row[0]] = mi_estimation_data[current_material][row[0]].copy().reset_index()
         # analysis_growth[current_material][row[0]].drop_duplicates(subset="id", keep="last", inplace=True)
-        analysis_growth[current_material][row[0]]['expansion_round'] = analysis_growth[current_material][row[0]]['expansion_round'].astype("string")
+        analysis_growth[current_material][row[0]]['expansion_rounds'] = analysis_growth[current_material][row[0]]['expansion_rounds'].astype("string")
         analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(combination=str(row[0]))
         analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(use=row[0][0])
         analysis_growth[current_material][row[0]] = analysis_growth[current_material][row[0]].assign(construction=row[0][1])
@@ -888,7 +923,7 @@ for current_material in materials:
 
 current_combi = ('RS', 'T', 'ASIA_TWN')
 growth = sns.kdeplot(data=analysis_growth[current_material][current_combi], x=current_material,
-                     hue="expansion_round", hue_order=["4", "3", "2", "1", "0"],
+                     hue="expansion_rounds", hue_order=["4", "3", "2", "1", "0"],
                      linewidth=0, palette="magma",
                      bw_adjust=.2, multiple="stack")
 growth.set_xlim(left=0, right=buildings_import.max()[current_material])
@@ -903,7 +938,7 @@ def comparegrowth_kde(u, c, r, material, axx, axy):
     else:
         outliercut = buildings_import.max()[material]
     growth = sns.kdeplot(data=analysis_growth[material][combi], x=material,
-                         hue="expansion_round", hue_order=["6", "5", "4", "3", "2", "1", "0"],
+                         hue="expansion_rounds", hue_order=["6", "5", "4", "3", "2", "1", "0"],
                          linewidth=0, palette="magma",
                          bw_adjust=.2, multiple="stack",
                          warn_singular=False,
@@ -979,19 +1014,19 @@ def compareviolin_landscape(u, c, r, material, axx, axy):
     viol.set_ylabel("")
     viol.set_yticks([])
     viol.legend([], [], frameon=False)
-    viol.annotate('After (n = ' + str(mi_estimation_stats[material].loc[violcombi, "expand_count"]) + ', ' + str(mi_estimation_stats[material].loc[violcombi, "expand_rounds"]) + ' expansions)\n'
-                  'p5 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_5"], 2)) + '\n'
-                  'p25 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_25"], 2)) + '\n'
-                  'median = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_50"], 2)) + '\n'
-                  'p75 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_75"], 2)) + '\n'
-                  'p95 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expand_95"], 2)),
+    viol.annotate('After (n = ' + str(mi_estimation_stats[material].loc[violcombi, "expanded_count"]) + ', ' + str(mi_estimation_stats[material].loc[violcombi, "expansion_rounds"]) + ' expansions)\n'
+                  'p5 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expanded_5"], 2)) + '\n'
+                  'p25 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expanded_25"], 2)) + '\n'
+                  'median = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expanded_50"], 2)) + '\n'
+                  'p75 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expanded_75"], 2)) + '\n'
+                  'p95 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "expanded_95"], 2)),
                   xy=(outliercut - 1, -0.49), va='top', ha='right', color='C0')
     if outliercut < buildings_import.max()[material]:
         viol.annotate('outliers > ' + str(outliercut) + ' = ' + str(analysis_comparisons[material][violcombi].query(material + ' > @outliercut and (MIs == "after")').count()[1]),
                       xy=(outliercut - 1, -0.28), va='top', ha='right', color='C0')
 
-    if mi_estimation_stats[material].loc[violcombi, "db_count"] > 0:
-        viol.annotate('Before (n = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_count"])) + ')\n'
+    if mi_estimation_stats[material].loc[violcombi, "original_db_count"] > 0:
+        viol.annotate('Before (n = ' + str(round(mi_estimation_stats[material].loc[violcombi, "original_db_count"])) + ')\n'
                       'p5 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_25"], 2)) + '\n'
                       'p25 = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_25"], 2)) + '\n'
                       'median = ' + str(round(mi_estimation_stats[material].loc[violcombi, "db_50"], 2)) + '\n'
@@ -1032,18 +1067,18 @@ for current_material in materials:
 # TODO list:
 # for the paper we'll select some examples of how the algorithm behaves with lots of perfect matches, the cse of 10-15, and the case of 0-1 datapoints
 # create a user interface that shows violin plots and percentiles before users download the data
-# compare results with previous studies: marinova, heeren, etc.
+# compare results with previous studies: marinova, etc.
 
 current_material = 'steel'
 mi_estimation_stats[current_material].to_clipboard()
 
 # comparisons of before-after vis a vis number of rounds
-mi_estimation_stats[current_material]['db_count'] = mi_estimation_stats[current_material]['db_count'].fillna(0)
-sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="use_short", data=mi_estimation_stats[current_material])
-sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="const_short", data=mi_estimation_stats[current_material])
-sns.relplot(x="expand_count", y="expand_rounds", size="db_count", sizes=(15, 200), hue="R5", data=mi_estimation_stats[current_material])
-sns.relplot(x="expand_count", y="db_count", hue="expand_rounds", data=mi_estimation_stats[current_material])
-sns.relplot(x="expand_count", y="db_count", hue="R5", data=mi_estimation_stats[current_material])
-sns.relplot(x="db_count", y="expand_count", hue="R5", size="expand_rounds", sizes=(10, 300), alpha=0.5, data=mi_estimation_stats[current_material])
-sns.relplot(x="expand_rounds", y="db_count", hue="R5", size="expand_count", sizes=(1, 400), alpha=0.3, data=mi_estimation_stats[current_material])
-sns.swarmplot(x="expand_rounds", y="expand_count", hue="R5", data=mi_estimation_stats[current_material])
+mi_estimation_stats[current_material]['original_db_count'] = mi_estimation_stats[current_material]['original_db_count'].fillna(0)
+sns.relplot(x="expanded_count", y="expansion_rounds", size="original_db_count", sizes=(15, 200), hue="use_short", data=mi_estimation_stats[current_material])
+sns.relplot(x="expanded_count", y="expansion_rounds", size="original_db_count", sizes=(15, 200), hue="const_short", data=mi_estimation_stats[current_material])
+sns.relplot(x="expanded_count", y="expansion_rounds", size="original_db_count", sizes=(15, 200), hue="R5", data=mi_estimation_stats[current_material])
+sns.relplot(x="expanded_count", y="original_db_count", hue="expansion_rounds", data=mi_estimation_stats[current_material])
+sns.relplot(x="expanded_count", y="original_db_count", hue="R5", data=mi_estimation_stats[current_material])
+sns.relplot(x="original_db_count", y="expanded_count", hue="R5", size="expansion_rounds", sizes=(10, 300), alpha=0.5, data=mi_estimation_stats[current_material])
+sns.relplot(x="expanded_rounds", y="original_db_count", hue="R5", size="expanded_count", sizes=(1, 400), alpha=0.3, data=mi_estimation_stats[current_material])
+sns.swarmplot(x="expanded_rounds", y="expanded_count", hue="R5", data=mi_estimation_stats[current_material])
