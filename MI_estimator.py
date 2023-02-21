@@ -43,21 +43,66 @@ materials = ['concrete', 'brick', 'wood', 'steel', 'glass', 'plastics', 'aluminu
 
 # %% load the MI database with constrcution type ML results from Orange
 
-buildings_import = pd.read_excel("data_input_and_ml_processing\\buildings_v2-const_type_ML.xlsx", sheet_name="Sheet1")
+buildings_import_full = pd.read_excel("data_input_and_ml_processing\\buildings_v2-const_type_ML.xlsx", sheet_name="Sheet1")
 
 # create new column const_short where U from 'Construction type' is replaced by 'Random Forest'
-buildings_import['const_short'] = buildings_import['Random Forest'].where((buildings_import['Construction type'].str.match('U')), buildings_import['Construction type'])
+buildings_import_full['const_short'] = buildings_import_full['Random Forest'].where((buildings_import_full['Construction type'].str.match('U')), buildings_import_full['Construction type'])
 
 # combine all plastics types
-buildings_import['plastics'] = buildings_import[['plastics', 'PVC', 'polystyrene']].sum(axis=1, min_count=1)
+buildings_import_full['plastics'] = buildings_import_full[['plastics', 'PVC', 'polystyrene']].sum(axis=1, min_count=1)
 
 # clean up buildings_import
-buildings_import = buildings_import[['id'] + materials + dims_names]
+buildings_import = buildings_import_full[['id'] + materials + dims_names]
 
-# %% EDA: database plots
+# %% EDA: pairwise database plots
 
 # buildings_import.reset_index(inplace=True)
 
+# pairwise plots of materials
+lim = -10
+c = sns.pairplot(data=buildings_import_full.query('~(`Construction type` == "U")'), corner=True,
+                 hue="Construction type", hue_order=['C', 'M', 'T', 'S'], palette="tab10",
+                 x_vars=materials[0:4], y_vars=materials[0:4],
+                 plot_kws=(dict(alpha=0.3, s=20, linewidth=0)),
+                 # diag_kind="hist", diag_kws=dict(element="step", linewidth=0.5))
+                 diag_kws=dict(alpha=0.3, bw_adjust=1.5, linewidth=0, common_norm=False),
+                 height=2, aspect=1)
+# sns.move_legend(c, loc='upper center', ncol=2, bbox_to_anchor=(.45, .95))
+c.map_lower(sns.kdeplot, alpha=1, levels=2, bw_adjust=2)
+c.axes[3, 0].set_xlim(left=lim, right=4000)
+c.axes[3, 1].set_xlim(left=lim, right=3000)
+c.axes[3, 2].set_xlim(left=lim, right=300)
+c.axes[3, 3].set_xlim(left=lim, right=450)
+c.axes[1, 0].set_ylim(bottom=lim, top=3000)
+c.axes[2, 0].set_ylim(bottom=lim, top=300)
+c.axes[3, 0].set_ylim(bottom=lim, top=450)
+c._legend.remove()
+# c.axes[1, 0].legend(loc='upper left', bbox_to_anchor=(1, 1.5))
+
+u = sns.pairplot(data=buildings_import_full.query('~(use_short == "UN") & ~(use_short == "IN")'), corner=True,
+                 hue="use_short", hue_order=['NR', 'RS', 'RM', 'RU'], palette="Set1_r",
+                 x_vars=materials[0:4], y_vars=materials[0:4],
+                 plot_kws=(dict(alpha=0.5, s=20, linewidth=0)),
+                 # diag_kind="hist", diag_kws=dict(element="step", linewidth=0.5))
+                 diag_kws=dict(alpha=0.3, bw_adjust=1.5, linewidth=0, common_norm=False),
+                 height=2, aspect=1)
+# sns.move_legend(u, 'upper center', bbox_to_anchor=(.55, .65))
+u.map_lower(sns.kdeplot, alpha=1, levels=2, bw_adjust=2)
+u.axes[3, 0].set_xlim(left=lim, right=4000)
+u.axes[3, 1].set_xlim(left=lim, right=3000)
+u.axes[3, 2].set_xlim(left=lim, right=300)
+u.axes[3, 3].set_xlim(left=lim, right=450)
+u.axes[1, 0].set_ylim(bottom=lim, top=3000)
+u.axes[2, 0].set_ylim(bottom=lim, top=300)
+u.axes[3, 0].set_ylim(bottom=lim, top=450)
+u._legend.remove()
+
+
+stats.ks_2samp(buildings_import_full.query('(`Construction type` == "T")')['concrete'], buildings_import_full.query('(`Construction type` == "S")')['concrete'])  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets do not come from the same distribution.
+stats.kruskal(buildings_import_full.query('(`Construction type` == "T")')['concrete'], buildings_import_full.query('(`Construction type` == "S")')['concrete'])  # if p < 0.05 we reject the null hypothesis. Hence the two sample datasets have different medians.
+stats.anderson_ksamp(buildings_import_full.query('(`Construction type` == "T")')['concrete'], buildings_import_full.query('(`Construction type` == "S")')['concrete'])  # works only when n>=2. If p < 0.05 we reject the null hypothesis. Hence the two sets do not come from the same distribution.
+
+# %%  EDA: violin and more pairwise database plots
 # SSP 5 regions
 buildings_import['R5'] = buildings_import['R5_32'].str.split('_').str[0]
 
@@ -86,6 +131,25 @@ sns.catplot(x="const_short", y="glass", col="use_short", row="R5", kind="violin"
 sns.catplot(x="const_short", y="glass", col="use_short", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
 sns.catplot(x="const_short", y="aluminum", col="use_short", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
 sns.catplot(x="const_short", y="copper", col="use_short", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
+
+# pairwise plots of materials
+sns.pairplot(data=buildings_import.query('~(wood > 300) & ~(steel > 500)'), corner=False,
+             hue="const_short", hue_order=['C', 'M', 'T', 'S'],
+             x_vars=materials[0:4], y_vars=materials[0:4],
+             kind="kde", plot_kws=(dict(alpha=.3, levels=2, bw_adjust=1, fill=True)),
+             diag_kind="hist", diag_kws=dict(element="step"))
+
+sns.pairplot(data=buildings_import.query('~(wood > 300) & ~(steel > 500)'), corner=True,
+             hue="const_short", hue_order=['C', 'M', 'T', 'S'],
+             x_vars=materials[0:4], y_vars=materials[0:4],
+             kind="kde", plot_kws=(dict(alpha=1, levels=2, bw_adjust=1, fill=False)),
+             diag_kind="hist", diag_kws=dict(element="step"))
+
+sns.pairplot(data=buildings_import.query('~(wood > 300) & ~(steel > 500)'), corner=True,
+             hue="use_short", palette="Set1",
+             x_vars=materials[0:4], y_vars=materials[0:4],
+             kind="kde", plot_kws=(dict(alpha=1, levels=2, bw_adjust=1, fill=False)),
+             diag_kind="hist", diag_kws=dict(element="step"))
 
 # bivariate distribution plots https://seaborn.pydata.org/tutorial/distributions.html#visualizing-bivariate-distributions
 kdebw = .6
@@ -229,14 +293,18 @@ sns.jointplot(data=buildings_import, x="wood", y="brick", hue="R5", linewidth=0,
               ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
               marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
-# copper and aluminum: check that there's no clear difference in categories
-sns.catplot(data=buildings_import.reset_index(), x="copper", y="const_short")
-sns.catplot(data=buildings_import.reset_index(), x="copper", y="use_short")
-sns.catplot(data=buildings_import.reset_index(), x="copper", y="R5_32")
+# %% minor materials: visualize if there's a clear difference in categories
+sns.boxplot(data=buildings_import.reset_index(), x="copper", y="const_short")
+sns.boxplot(data=buildings_import.reset_index(), x="copper", y="use_short")
+sns.boxplot(data=buildings_import.reset_index(), x="copper", y="R5_32")
 
-sns.catplot(data=buildings_import.reset_index(), x="aluminum", y="const_short")
-sns.catplot(data=buildings_import.reset_index(), x="aluminum", y="use_short")
-sns.catplot(data=buildings_import.reset_index(), x="aluminum", y="R5_32")
+sns.boxplot(data=buildings_import.reset_index(), x="aluminum", y="const_short")
+sns.boxplot(data=buildings_import.reset_index(), x="aluminum", y="use_short")
+sns.boxplot(data=buildings_import.reset_index(), x="aluminum", y="R5_32")
+
+sns.boxplot(data=buildings_import.reset_index(), x="plastics", y="const_short")
+sns.boxplot(data=buildings_import.reset_index(), x="plastics", y="use_short")
+sns.boxplot(data=buildings_import.reset_index(), x="plastics", y="R5_32")
 
 # %% final setups of the database data
 
@@ -263,7 +331,6 @@ db_combinations_stats = [pd.DataFrame(data=None, index=pd.MultiIndex.from_produc
                          buildings_import[materials].groupby(dims_names).quantile(q=0.50),
                          buildings_import[materials].groupby(dims_names).quantile(q=0.75),
                          buildings_import[materials].groupby(dims_names).quantile(q=0.95)]
-# TODO decide which quantile interpolation is best i.e. what does excel do?
 
 db_combinations_stats = pd.concat(db_combinations_stats, axis=1, keys=['', 'count', 'avg', 'sd', 'p5', 'p25', 'p50', 'p75', 'p95'])
 
@@ -518,8 +585,11 @@ for current_material in db_material_scores.query('score >= 2').index:
     mi_estimation_stats[current_material].reset_index().to_excel(mi_estimation_writer, sheet_name=current_material)
 
 # use global statistics for materials with score < 2
+print('global statistics for materials with score < 2')
 for current_material in db_material_scores.query('score < 2').index:  # bulk edit all combinations with the global statistics, to avoid cycling through all combinations unnecessarily
     current_selection_combined = buildings_import[['id', current_material]].copy().dropna(how='any')
+    current_selection_combined['expansion_rounds'] = 1
+    current_selection_combined['expansion_rounds'] = current_selection_combined['expansion_rounds'].astype('int64')
     mi_estimation_stats[current_material]['expansion_rounds'] = 1
     mi_estimation_stats[current_material]['expanded_count'] = current_selection_combined[current_material].count()
     mi_estimation_stats[current_material]['expanded_0'] = np.quantile(current_selection_combined[current_material], q=0.00)
@@ -535,7 +605,9 @@ for current_material in db_material_scores.query('score < 2').index:  # bulk edi
     # add perfect combinations for the few that have them, to give them some weight, and rerun the statistics
     for current_combi in mi_estimation_stats[current_material].query('original_db_count >= 1').index:
         mi_estimation_data[current_material][current_combi] = pd.concat([current_selection_combined, buildings_import.loc[current_combi, ['id', current_material]].copy().dropna(how='any')])
-        mi_estimation_stats[current_material].loc[current_combi, 'expansion_rounds'] += 1
+        mi_estimation_data[current_material][current_combi]['expansion_rounds'].fillna(0, inplace=True)
+        mi_estimation_data[current_material][current_combi]['expansion_rounds'] = mi_estimation_data[current_material][current_combi]['expansion_rounds'].astype('int64')
+        # mi_estimation_stats[current_material].loc[current_combi, 'expansion_rounds'] += 1
         mi_estimation_stats[current_material].loc[current_combi, 'expanded_count'] = mi_estimation_data[current_material][current_combi][current_material].count()
         mi_estimation_stats[current_material].loc[current_combi, 'expanded_0'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.00)
         mi_estimation_stats[current_material].loc[current_combi, 'expanded_5'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.05)  # faster than pandas's current_selection_combined['steel'].quantile(q=0.05)
@@ -544,11 +616,12 @@ for current_material in db_material_scores.query('score < 2').index:  # bulk edi
         mi_estimation_stats[current_material].loc[current_combi, 'expanded_75'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.75)
         mi_estimation_stats[current_material].loc[current_combi, 'expanded_95'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=0.95)
         mi_estimation_stats[current_material].loc[current_combi, 'expanded_100'] = np.quantile(mi_estimation_data[current_material][current_combi][current_material], q=1.00)
+
     # export as sheet
     mi_estimation_stats[current_material].reset_index().to_excel(mi_estimation_writer, sheet_name=current_material)
 mi_estimation_writer.close()
 
-
+print('exporting full data to Excel')
 mi_data_writer = pd.ExcelWriter('MI_results\\MI_data_' + today + ".xlsx", engine='openpyxl')
 for current_material in materials:
     pd.concat([mi_estimation_data[current_material][current_combi].reset_index()
@@ -556,13 +629,21 @@ for current_material in materials:
               axis=0,
               keys=list(mi_estimation_data[current_material].keys())).sort_index().to_excel(mi_data_writer, sheet_name=current_material)
 mi_data_writer.close()
+print('done')
 
 # %% analysis: summary boxplots
 
 # merge results data for boxplots, start with a list of dataframes and then concatenate it to one dataframe
 # structure should be: combination dict: use, const, r32, material, value
 # then we can use seaborn for boxplots etc. of various layouts
-
+dims_list_specified_named = dict()
+dims_list_specified_named[dims_names[0]] = ['Nonresidential', 'Multifamily', 'Single family']
+dims_list_specified_named[dims_names[1]] = ['Reinforced concrete', 'Masonry construction', 'Timber construction', 'Steel frame']
+dims_list_specified_named[dims_names[2]] = ["China", "Indonesia", "India", "Other Asia (FCP)", "Other Asia (Low)", "Other Asia (Med)", "Pakistan", "Taiwan",
+                                            "Brazil", "LATAM (low)", "LATAM (Med)", "Mexico",
+                                            "MEA (High)", "MEA (Med)", "North Africa", "South Africa", "Subsaharan (Low)", "Subsaharan (Med)",
+                                            "Australia & NZ", "Canada", "SE Europe", "EFTA", "EU12 (High)", "EU12 (Med)", "EU15", "Japan", "S. Korea", "Turkey", "USA",
+                                            "Central Asia", "East Europe (FCP)", "Russia"]
 
 analysis_comparison_data = {}
 for current_material in materials:
@@ -608,6 +689,70 @@ analysis_comparison_data['R5'] = analysis_comparison_data['R5_32'].str.split('_'
 #             col='const_short', col_order=dims_list_specified[1],
 #             linewidth=0.8, showfliers=False,
 #             )
+
+# boxen by region as page, usetype as rows, materials as columns, consttype in plot
+with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' + today + '.pdf') as pdf:
+    for region in list(enumerate(dims_list_specified[2])):
+        boxes = sns.catplot(kind="boxen", k_depth=3, scale="linear", saturation=0.75,
+                            data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region[1]],
+                            y='const_short', order=['C', 'M', 'T', 'S'], palette="deep",
+                            x='value', sharex=False,
+                            col='material', col_order=materials,
+                            row='use_short', row_order=dims_list_specified[0],
+                            linewidth=0.0, showfliers=False,
+                            aspect=0.8, legend_out=False)
+        boxes.fig.subplots_adjust(top=0.95, left=0.1, bottom=0.1)
+        boxes.fig.suptitle(dims_list_specified_named['R5_32'][region[0]], fontsize=20)
+        boxes.set_titles("")
+        boxes.despine(left=True)
+        boxes.set_yticklabels(dims_list_specified_named['const_short'], size=15)
+        for boxax in boxes.axes_dict.values():
+            boxax.tick_params(left=False)
+            for line in boxax.get_lines():
+                line.set(color='white', linewidth=1.5, alpha=1)  # https://ourpython.com/python/how-to-change-the-colour-a-boxplot-line-in-seaborn
+        for boxax in range(3):
+            boxes.axes[boxax][0].set_ylabel(dims_list_specified_named['use_short'][boxax], size=20)
+            boxes.axes[boxax][0].set(xlim=(0, 1700))
+            boxes.axes[boxax][1].set(xlim=(0, 1700))
+            boxes.axes[boxax][2].set(xlim=(0, 400))
+            boxes.axes[boxax][3].set(xlim=(0, 400))
+            boxes.axes[boxax][4].set(xlim=(0, 20))
+            boxes.axes[boxax][5].set(xlim=(0, 20))
+            boxes.axes[boxax][6].set(xlim=(0, 10))
+            boxes.axes[boxax][7].set(xlim=(0, 10))
+        for boxax in range(8):
+            boxes.axes[2][boxax].set_xlabel(materials[boxax] + "\n $kg/m^2$ ", size=20)
+        pdf.savefig(boxes.fig)
+        plt.close()
+
+
+# by material as page, consttype as rows, usetype as columns, regions in plot, r5 as colors
+with PdfPages('postestimation_analysis\\boxplots_materials_' + str(stop_count) + '_' + today + '.pdf') as pdf:
+    for current_material in materials:
+        boxes = sns.catplot(kind="boxen", k_depth=3, scale="linear", saturation=0.75,
+                            data=analysis_comparison_data.loc[analysis_comparison_data['material'] == current_material],
+                            x='R5_32', y='value', order=dims_list_specified[2],
+                            palette="plasma", dodge=False, hue='R5', hue_order=['ASIA', 'MAF', 'REF', 'LAM', 'OECD'],
+                            row='const_short', row_order=dims_list_specified[1],
+                            col='use_short', col_order=dims_list_specified[0],
+                            linewidth=0, showfliers=False,
+                            aspect=3, legend_out=False)
+        boxes.fig.subplots_adjust(left=0.05, top=0.95, bottom=0.15)
+        boxes.set_xticklabels(dims_list_specified_named['R5_32'], size=20, rotation="vertical")
+        boxes.fig.suptitle(current_material, fontsize=20)
+        boxes.set_titles("")
+        boxes.despine(left=True)
+        for boxax in boxes.axes_dict.values():
+            boxax.tick_params(left=False, bottom=False)
+            for line in boxax.get_lines():
+                line.set(color='white', linewidth=1.5, alpha=1)  # https://ourpython.com/python/how-to-change-the-colour-a-boxplot-line-in-seaborn
+        for boxax in range(4):
+            boxes.axes[boxax][0].set_ylabel(dims_list_specified_named['const_short'][boxax] + "\n $kg/m^2$ ", size=20)
+        for boxax in range(3):
+            boxes.axes[3][boxax].set_xlabel(dims_list_specified_named['use_short'][boxax], size=20)
+        pdf.savefig(boxes.fig)
+        plt.close()
+
 
 # # by region as page, usetype as rows, consttype as columns, materials in plot
 # with PdfPages('postestimation_analysis\\boxplots_' + str(stop_count) + '_' + today + '.pdf') as pdf:
@@ -704,42 +849,6 @@ analysis_comparison_data['R5'] = analysis_comparison_data['R5_32'].str.split('_'
 #         pdf.savefig(boxes.fig)
 #         plt.close()
 
-# boxen by region as page, usetype as rows, materials as columns, consttype in plot
-with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' + today + '.pdf') as pdf:
-    const_types = ['Reinforced concrete', 'Masonry construction', 'Timber construction', 'Steel frame']
-    use_types = ['Nonresidential', 'Multifamily', 'Single family']
-    for region in dims_list_specified[2]:
-        boxes = sns.catplot(kind="boxen", k_depth=3, scale="linear", saturation=0.75,
-                            data=analysis_comparison_data.loc[analysis_comparison_data['R5_32'] == region],
-                            y='const_short', order=['C', 'M', 'T', 'S'], palette="deep",
-                            x='value', sharex=False,
-                            col='material', col_order=materials,
-                            row='use_short', row_order=dims_list_specified[0],
-                            linewidth=0.0, showfliers=False,
-                            aspect=0.8, legend_out=False)
-        boxes.fig.subplots_adjust(top=0.95, left=0.1, bottom=0.1)
-        boxes.fig.suptitle(region, fontsize=20)
-        boxes.set_titles("")
-        boxes.despine(left=True)
-        boxes.set_yticklabels(const_types, size=15)
-        for boxax in boxes.axes_dict.values():
-            boxax.tick_params(left=False)
-            for line in boxax.get_lines():
-                line.set(color='white', linewidth=1.5, alpha=1)  # https://ourpython.com/python/how-to-change-the-colour-a-boxplot-line-in-seaborn
-        for boxax in range(3):
-            boxes.axes[boxax][0].set_ylabel(use_types[boxax], size=20)
-            boxes.axes[boxax][0].set(xlim=(0, 1700))
-            boxes.axes[boxax][1].set(xlim=(0, 1700))
-            boxes.axes[boxax][2].set(xlim=(0, 400))
-            boxes.axes[boxax][3].set(xlim=(0, 400))
-            boxes.axes[boxax][4].set(xlim=(0, 20))
-            boxes.axes[boxax][5].set(xlim=(0, 20))
-            boxes.axes[boxax][6].set(xlim=(0, 10))
-            boxes.axes[boxax][7].set(xlim=(0, 10))
-        for boxax in range(8):
-            boxes.axes[2][boxax].set_xlabel(materials[boxax] + "\n $kg/m^2$ ", size=20)
-        pdf.savefig(boxes.fig)
-        plt.close()
 
 # # by region as page, materials as rows, usetype as columns, consttype in plot
 # with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' + today + '.pdf') as pdf:
@@ -774,34 +883,6 @@ with PdfPages('postestimation_analysis\\boxplots_inv_' + str(stop_count) + '_' +
 #         pdf.savefig(boxes.fig)
 #         plt.close()
 
-# by material as page, consttype as rows, usetype as columns, regions in plot, r5 as colors
-with PdfPages('postestimation_analysis\\boxplots_materials_' + str(stop_count) + '_' + today + '.pdf') as pdf:
-    const_types = ['Reinforced concrete', 'Masonry', 'Steel frame', 'Timber construction']
-    use_types = ['Nonresidential', 'Multifamily', 'Single family']
-    for current_material in materials:
-        boxes = sns.catplot(kind="boxen", k_depth=3, scale="linear", saturation=0.75,
-                            data=analysis_comparison_data.loc[analysis_comparison_data['material'] == current_material],
-                            x='R5_32', y='value', order=dims_list_specified[2],
-                            palette="plasma", dodge=False, hue='R5', hue_order=['ASIA', 'MAF', 'REF', 'LAM', 'OECD'],
-                            row='const_short', row_order=dims_list_specified[1],
-                            col='use_short', col_order=dims_list_specified[0],
-                            linewidth=0, showfliers=False,
-                            aspect=3, legend_out=False)
-        boxes.set_xticklabels(size=20, rotation="vertical")
-        boxes.fig.subplots_adjust(left=0.05, top=0.95, bottom=0.15)
-        boxes.fig.suptitle(current_material, fontsize=20)
-        boxes.set_titles("")
-        boxes.despine(left=True)
-        for boxax in boxes.axes_dict.values():
-            boxax.tick_params(left=False, bottom=False)
-            for line in boxax.get_lines():
-                line.set(color='white', linewidth=1.5, alpha=1)  # https://ourpython.com/python/how-to-change-the-colour-a-boxplot-line-in-seaborn
-        for boxax in range(4):
-            boxes.axes[boxax][0].set_ylabel(const_types[boxax] + "\n $kg/m^2$ ", size=20)
-        for boxax in range(3):
-            boxes.axes[3][boxax].set_xlabel(use_types[boxax], size=20)
-        pdf.savefig(boxes.fig)
-        plt.close()
 
 # %% analysis: growth of distributions by expansion round, histograms
 
@@ -884,7 +965,7 @@ def comparegrowth_hist(u, c, r, material, axx_before, axx_after, axx_hist, axy):
     return None
 
 
-for current_material in materials:
+for current_material in materials[6:]:
     filename = current_material + '_stop_at_' + str(stop_count) + '_' + today
     with PdfPages('postestimation_analysis\\' + filename + '.pdf') as pdf:
         for region in dims_list_specified[2]:
