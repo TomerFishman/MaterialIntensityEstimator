@@ -1,6 +1,6 @@
 {
     "categorical": {
-        "Construction type": {
+        "structure": {
             "colors": {
                 "RC": "#DADF9E",
                 "M": "#DA7C56",
@@ -9,7 +9,7 @@
                 "U": "#A6A6A6"
             }
         },
-        "Use type": {
+        "function": {
             "colors": {
                 "Informal": "#55FF00",
                 "Nonresidential": "#AA00FF",
@@ -19,7 +19,7 @@
                 "unspecified": "#989898"
             }
         },
-        "Region": {
+        "region": {
             "rename": "",
             "renamed_values": {},
             "colors": {
