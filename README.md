@@ -1,6 +1,6 @@
 # RASMI: Regional Assessment of buildings’ Material Intensities
 
-A framework to estimate ranges of buildings' material intensities (kg/m^2^)
+A framework to estimate ranges of buildings' material intensities (kg/m<sup>2</sup>)
 
 Please refer to the Data Descriptor article for full details.
 
