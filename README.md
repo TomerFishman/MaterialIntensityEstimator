@@ -2,6 +2,8 @@
 
 A framework to estimate ranges of buildings' material intensities (kg/m<sup>2</sup>)
 
+RASMI aims to answer the question ***“which MI data are appropriate for my country/region of interest?***
+
 Please refer to the Data Descriptor article for full details.
 
 ## What's RASMI?
@@ -16,7 +18,7 @@ RASMI consists of 3072 MI ranges for:
 
 Each datapoint is a range of values that represent one of the unique combinations of these dimensions. This yields 8 x 4 x 3 x 32 = 3072 MI ranges.
 
-For instance, the material intensity of *concrete* `[material]` in *steel frame structures* `[structure type]` used for *multifamily housing* `[function type]` in *Japan* `[region]`.
+For instance, the range of material intensities of *concrete* `[material]` in *steel frame structures* `[structure type]` used for *multifamily housing* `[function type]` in *Japan* `[region]` is estimated to be 160 kg/m<sup>2</sup> - 729 kg/m<sup>2</sup> (in the 20230905 version of the data).
 
 ## Motivation
 
@@ -25,7 +27,7 @@ The dataset is reproducible, traceable, and updatable, using synthetic data when
 
 ## The data
 is in MI_results\
-- MI_ranges_(date).xlsx is the dataset of the estimated MI ranges. **This is probably the file you're looking for.** 
+- MI_ranges_(date).xlsx is the dataset of the estimated MI ranges. ***This is probably the file you're looking for.***
 - MI_data_(date).xlsx is the raw pools of MI used to create the MI ranges. This is mostly for reproducability.
 
 ### Versioning
@@ -42,6 +44,7 @@ Versions are marked by the (date) in the filename.
 |data_input_and_ml_processing\ |buildings_v2.xlsx |data from the Heeren & Fishman DB |
 | |buildings_v2-structure_type_ML.ows |classification of structure types (Orange suite file) |
 | |buildings_v2-structure_type_ML.xlsx |output of the classification of structure types |
+| |dims_structure.xlsx |structure and label options for the various dimensions of the data|
 |postestimation\ |various files |outputs of the postestimation code in MI_estimator.py |
 |tests\ | various folders and files |outputs of the tests of cross validation and effects of the pool size on the MI results |
 
