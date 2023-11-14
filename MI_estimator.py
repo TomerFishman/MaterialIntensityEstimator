@@ -54,6 +54,7 @@ materials = ['concrete', 'brick', 'wood', 'steel', 'glass', 'plastics', 'aluminu
 buildings_import_full = pd.read_excel("data_input_and_ml_processing\\buildings_v2-structure_type_ML.xlsx", sheet_name="Sheet1")
 
 # update column 'structure' where U from the original 'structure' is replaced by 'Random Forest'
+buildings_import_full['structure_with_u'] = buildings_import_full['structure']
 buildings_import_full['structure'] = buildings_import_full['Random Forest'].where((buildings_import_full['structure'].str.match('U')), buildings_import_full['structure'])
 
 # combine all plastics types
@@ -63,187 +64,165 @@ buildings_import_full['plastics'] = buildings_import_full[['plastics', 'PVC', 'p
 buildings_import = buildings_import_full[['id'] + materials + dims_names]
 
 # %% EDA:  pairwise MI plots and violin plots (optional, run only for extra visualizations)
-
+# figure 1
+run_eda = True
 if run_eda:
-
-    # SSP 5 regions
-    buildings_import['R5'] = buildings_import['R5_32'].str.split('_').str[0]
-
-    """
-    pairwise plots of materials
-    """
-    sns.pairplot(data=buildings_import.query('~(wood > 300) & ~(steel > 500)'), corner=False,
-                 hue="structure", hue_order=['C', 'M', 'T', 'S'],
-                 x_vars=materials[0:4], y_vars=materials[0:4],
-                 kind="kde", plot_kws=(dict(alpha=.3, levels=2, bw_adjust=1, fill=True)),
-                 diag_kind="hist", diag_kws=dict(element="step"))
-
-    sns.pairplot(data=buildings_import.query('~(wood > 300) & ~(steel > 500)'), corner=True,
-                 hue="structure", hue_order=['C', 'M', 'T', 'S'],
-                 x_vars=materials[0:4], y_vars=materials[0:4],
-                 kind="kde", plot_kws=(dict(alpha=1, levels=2, bw_adjust=1, fill=False)),
-                 diag_kind="hist", diag_kws=dict(element="step"))
-
-    sns.pairplot(data=buildings_import.query('~(wood > 300) & ~(steel > 500)'), corner=True,
-                 hue="function", palette="Set1",
-                 x_vars=materials[0:4], y_vars=materials[0:4],
-                 kind="kde", plot_kws=(dict(alpha=1, levels=2, bw_adjust=1, fill=False)),
-                 diag_kind="hist", diag_kws=dict(element="step"))
 
     """
     bivariate distribution plots https://seaborn.pydata.org/tutorial/distributions.html#visualizing-bivariate-distributions
     """
-    kdebw = 1.5  # .6
-    scattersize = 120
-    scatteralpha = .3
+    kdebw = 1  # .6
+    scattersize = 20
+    scatteralpha = .4
+    height = 3
+    limits = {'concrete': 3000,  # round(buildings_import_full['concrete'].max(), ndigits=-2),
+              'steel': 400,
+              'brick': round(buildings_import_full['brick'].max(), ndigits=-2),
+              'wood': 300}
+    u_example = 184  # 49  # the id of the unspecified datapoint to be marked by a (+)
 
-    # no differentiation, for legend
-    buildings_import['static'] = "static"
-    g = sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="static", linewidth=0, height=8, palette="icefire",
-                      xlim=(0, 3000),  # round(buildings_import['concrete'].max(), ndigits=-2)),
-                      ylim=(0, 500),  # round(buildings_import['steel'].max(), ndigits=-2)),
-                      marginal_kws=dict(bw_adjust=kdebw, cut=0, linewidth=0, color="black"), joint_kws=(dict(alpha=scatteralpha, s=scattersize, color="black")))
-    g.plot_joint(sns.kdeplot, alpha=1, levels=3, bw_adjust=2, color="black")
+    from itertools import combinations
+    for materials_combination in combinations(['concrete', 'steel', 'wood', 'brick'], 2):
+        print(materials_combination)
+        sns.jointplot(data=buildings_import_full.query('~(function == "UN") & ~(function == "IN") & ~(structure_with_u == "U")'),
+                      x=materials_combination[0], y=materials_combination[1],
+                      hue="structure", hue_order=["M", "C", "T", "S"],
+                      linewidth=0, height=height,
+                      xlim=(0, limits[materials_combination[0]]),
+                      ylim=(0, limits[materials_combination[1]]),
+                      legend=False, palette="tab10",
+                      marginal_kws=dict(bw_adjust=kdebw, cut=0, common_norm=False),
+                      joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+        sns.scatterplot(data=buildings_import_full.loc[u_example:u_example],
+                        x=materials_combination[0], y=materials_combination[1],
+                        linewidth=1.5, marker="+",
+                        legend=False, color="0.1", alpha=1, s=scattersize * 3)
+        # sns.scatterplot(data=buildings_import_full.query('(structure_with_u == "U")'),
+        #                 x=materials_combination[0], y=materials_combination[1], linewidth=0,
+        #                 legend=False, color="0.1", alpha=.5, s=scattersize / 5)
+        plt.savefig('fig1\\structure_' + materials_combination[0] + '_' + materials_combination[1] + str(u_example) + '.svg', transparent=True)
 
-    # by structure type
-    g = sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="structure", linewidth=0, height=8,
-                      xlim=(0, 3000),  # round(buildings_import['concrete'].max(), ndigits=-2)),
-                      ylim=(0, 500),  # round(buildings_import['steel'].max(), ndigits=-2)),
-                      marginal_kws=dict(bw_adjust=kdebw, cut=0, linewidth=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    g.plot_joint(sns.kdeplot, hue="structure", alpha=1, levels=2, bw_adjust=2)
-    sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['wood'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+        sns.jointplot(data=buildings_import_full.query('~(function == "UN") & ~(function == "IN") & ~(structure_with_u == "U")'),
+                      x=materials_combination[0], y=materials_combination[1],
+                      hue="function", hue_order=['NR', 'RS', 'RM', 'RU'],
+                      linewidth=0, height=height,
+                      xlim=(0, limits[materials_combination[0]]),
+                      ylim=(0, limits[materials_combination[1]]),
+                      legend=False, palette="Set1_r",
+                      marginal_kws=dict(bw_adjust=kdebw, cut=0),
+                      joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+        sns.scatterplot(data=buildings_import_full.loc[u_example:u_example],
+                        x=materials_combination[0], y=materials_combination[1],
+                        linewidth=1.5, marker="+",
+                        legend=False, color="0.1", alpha=1, s=scattersize * 3)
+        plt.savefig('fig1\\function_' + materials_combination[0] + '_' + materials_combination[1] + str(u_example) + '.svg', transparent=True)
 
-    sns.jointplot(data=buildings_import, x="steel", y="brick", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['steel'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="steel", y="wood", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['steel'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['wood'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
 
-    sns.jointplot(data=buildings_import, x="wood", y="brick", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['wood'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    # without outlyiers
-    sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, 500),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, 300),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="structure", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-
-    sns.jointplot(data=buildings_import, x="steel", y="brick", hue="structure", linewidth=0, height=8,
-                  xlim=(0, 500),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="steel", y="wood", hue="structure", linewidth=0, height=8,
-                  xlim=(0, 500),
-                  ylim=(0, 300),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-
-    sns.jointplot(data=buildings_import, x="wood", y="brick", hue="structure", linewidth=0, height=8,
-                  xlim=(0, 300),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+# %%
 
     # function types, without outlyiers
-    sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="function", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, 500),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="function", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+    sns.jointplot(data=buildings_import_full.query('~(function == "UN") & ~(function == "IN")'), x="concrete", y="steel", hue="function", linewidth=0, height=height,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
                   ylim=(0, 300),
+                  legend=False, palette="Set1_r",
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="function", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-
-    sns.jointplot(data=buildings_import, x="steel", y="brick", hue="function", linewidth=0, height=8,
-                  xlim=(0, 500),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
-                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
-    sns.jointplot(data=buildings_import, x="steel", y="wood", hue="function", linewidth=0, height=8,
-                  xlim=(0, 500),
+    plt.savefig('fig1\\function_c_s.svg')
+    sns.jointplot(data=buildings_import_full, x="concrete", y="wood", hue="function", linewidth=0, height=height,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
                   ylim=(0, 300),
+                  legend=False, palette="Set1_r",
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+    plt.savefig('fig1\\function_c_w.svg')
+    sns.jointplot(data=buildings_import_full.query('~(function == "UN") & ~(function == "IN")'), x="concrete", y="brick", hue="function", linewidth=0, height=height,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
+                  legend=False, palette="Set1_r",
+                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+    plt.savefig('fig1\\function_c_b.svg')
 
-    sns.jointplot(data=buildings_import, x="wood", y="brick", hue="function", linewidth=0, height=8,
+    sns.jointplot(data=buildings_import_full.query('~(function == "UN") & ~(function == "IN")'), x="steel", y="brick", hue="function", linewidth=0, height=height,
                   xlim=(0, 300),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
+                  legend=False, palette="Set1_r",
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+    plt.savefig('fig1\\function_s_b.svg')
+    sns.jointplot(data=buildings_import_full.query('~(function == "UN") & ~(function == "IN")'), x="steel", y="wood", hue="function", linewidth=0, height=height,
+                  xlim=(0, 300),
+                  ylim=(0, 300),
+                  legend=False, palette="Set1_r",
+                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+    plt.savefig('fig1\\function_s_w.svg')
+
+    sns.jointplot(data=buildings_import_full.query('~(function == "UN") & ~(function == "IN")'), x="wood", y="brick", hue="function", linewidth=0, height=height,
+                  xlim=(0, 300),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
+                  legend=False, palette="Set1_r",
+                  marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize)))
+    plt.savefig('fig1\\function_w_b.svg')
 
     # ssp regions 32 to check that none of the regions govern these results, without outlyiers
-    sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+    sns.jointplot(data=buildings_import_full, x="concrete", y="steel", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
                   ylim=(0, 500),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
-    sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+    sns.jointplot(data=buildings_import_full, x="concrete", y="wood", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
                   ylim=(0, 300),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
-    sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
+    sns.jointplot(data=buildings_import_full, x="concrete", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
-    sns.jointplot(data=buildings_import, x="steel", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
+    sns.jointplot(data=buildings_import_full, x="steel", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
                   xlim=(0, 500),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
-    sns.jointplot(data=buildings_import, x="steel", y="wood", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
+    sns.jointplot(data=buildings_import_full, x="steel", y="wood", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
                   xlim=(0, 500),
                   ylim=(0, 300),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
-    sns.jointplot(data=buildings_import, x="wood", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
+    sns.jointplot(data=buildings_import_full, x="wood", y="brick", hue="R5_32", palette=("Set2"), linewidth=0, height=8,
                   xlim=(0, 300),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
     # ssp 5 regions to check that none of the regions govern these results, without outlyiers
-    sns.jointplot(data=buildings_import, x="concrete", y="steel", hue="R5", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+    sns.jointplot(data=buildings_import_full, x="concrete", y="steel", hue="R5", linewidth=0, height=8,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
                   ylim=(0, 500),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
-    sns.jointplot(data=buildings_import, x="concrete", y="wood", hue="R5", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
+    sns.jointplot(data=buildings_import_full, x="concrete", y="wood", hue="R5", linewidth=0, height=8,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
                   ylim=(0, 300),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
-    sns.jointplot(data=buildings_import, x="concrete", y="brick", hue="R5", linewidth=0, height=8,
-                  xlim=(0, round(buildings_import['concrete'].max(), ndigits=-2)),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
+    sns.jointplot(data=buildings_import_full, x="concrete", y="brick", hue="R5", linewidth=0, height=8,
+                  xlim=(0, round(buildings_import_full['concrete'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
-    sns.jointplot(data=buildings_import, x="steel", y="brick", hue="R5", linewidth=0, height=8,
+    sns.jointplot(data=buildings_import_full, x="steel", y="brick", hue="R5", linewidth=0, height=8,
                   xlim=(0, 500),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
-    sns.jointplot(data=buildings_import, x="steel", y="wood", hue="R5", linewidth=0, height=8,
+    sns.jointplot(data=buildings_import_full, x="steel", y="wood", hue="R5", linewidth=0, height=8,
                   xlim=(0, 500),
                   ylim=(0, 300),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
 
-    sns.jointplot(data=buildings_import, x="wood", y="brick", hue="R5", linewidth=0, height=8,
+    sns.jointplot(data=buildings_import_full, x="wood", y="brick", hue="R5", linewidth=0, height=8,
                   xlim=(0, 300),
-                  ylim=(0, round(buildings_import['brick'].max(), ndigits=-2)),
+                  ylim=(0, round(buildings_import_full['brick'].max(), ndigits=-2)),
                   marginal_kws=dict(bw_adjust=kdebw, cut=0), joint_kws=(dict(alpha=scatteralpha, s=scattersize / 2)))
+
+    # no differentiation,in black and white
+    buildings_import_full['static'] = "static"
+    g = sns.jointplot(data=buildings_import_full, x="concrete", y="steel", hue="static", linewidth=0, height=8, palette="icefire",
+                      xlim=(0, 3000),  # round(buildings_import_full['concrete'].max(), ndigits=-2)),
+                      ylim=(0, 500),  # round(buildings_import_full['steel'].max(), ndigits=-2)),
+                      marginal_kws=dict(bw_adjust=kdebw, cut=0, linewidth=0, color="black"), joint_kws=(dict(alpha=scatteralpha, s=scattersize, color="black")))
+    g.plot_joint(sns.kdeplot, alpha=1, levels=3, bw_adjust=2, color="black")
 
     """
     pairwise database plots of all materials at once (but with no vertical histograms)
@@ -321,6 +300,21 @@ if run_eda:
     sns.catplot(x="structure", y="aluminum", col="function", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
     sns.catplot(x="structure", y="copper", col="function", row="R5", kind="strip", data=buildings_import, linewidth=1, height=3, aspect=1.2)
 
+    """
+    univariate
+    """
+    sns.kdeplot(data=buildings_import_full, x="wood", hue="structure", common_norm=False, fill=True, alpha=.3, linewidth=3, clip=(0, 400), bw_adjust=1, cumulative=False)
+
+    # SSP 5 regions
+    buildings_import_full['R5'] = buildings_import_full['R5_32'].str.split('_').str[0]
+
+    """
+    3d
+    """
+    fig = plt.figure(figsize=(10, 7))
+    ax = plt.axes(projection="3d")
+    ax.scatter3D(buildings_import_full['concrete'], buildings_import_full['brick'], buildings_import_full['wood'], s=buildings_import_full['steel'] / 2, c=pd.factorize(buildings_import_full['structure'])[0])
+    ax.legend(list(pd.factorize(buildings_import_full['structure'])[1]))
 
 # %% EDA: minor materials: visualize if there's a clear difference in categories (optional, run only for extra visualizations)
 
