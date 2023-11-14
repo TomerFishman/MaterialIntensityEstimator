@@ -2,6 +2,8 @@
 
 A framework to estimate ranges of buildings' material intensities (kg/m^2^)
 
+Please refer to the Data Descriptor article for full details.
+
 ## What's RASMI?
 
 The Regional Assessment of buildings’ Material Intensities (RASMI) is a dataset and accompanying method that provides comprehensive and consistent representative MI value ranges. Value ranges embody the inherent variability that exists in buildings. 
@@ -12,8 +14,9 @@ RASMI consists of 3072 MI ranges for:
 - `[function type]` 3 functional use types (Residential single-family, residential multifamily, and non-residential) 
 - `[region]` 32 global regions compatible with global IAM applications like the Shared Socioeconomic Pathways (SSP). 
 
-Each datapoint is a range of values that represent one of the unique combinations of these dimensions. This yields 8 x 4 x 3 x 32 = 3072 MI ranges. In other words, 384 `function-structure-region` combinations for each material. 
-For instance, the material intensity of concrete `[material]` in steel frame structures `[structure type]` used for multifamily housing `[function type]` in Japan `[region]`.
+Each datapoint is a range of values that represent one of the unique combinations of these dimensions. This yields 8 x 4 x 3 x 32 = 3072 MI ranges.
+
+For instance, the material intensity of *concrete* `[material]` in *steel frame structures* `[structure type]` used for *multifamily housing* `[function type]` in *Japan* `[region]`.
 
 ## Motivation
 
