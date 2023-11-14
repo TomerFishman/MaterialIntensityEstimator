@@ -2,7 +2,7 @@
 
 A framework to estimate ranges of buildings' material intensities (kg/m<sup>2</sup>)
 
-RASMI aims to answer the question ***“which MI data are appropriate for my country/region of interest?***
+RASMI aims to answer the question ***which MI data are appropriate for my country/region of interest?***
 
 Please refer to the Data Descriptor article for full details.
 
