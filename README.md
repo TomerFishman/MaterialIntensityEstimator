@@ -6,6 +6,8 @@ RASMI aims to answer the question ***which MI data are appropriate for my countr
 
 Please refer to the Data Descriptor article for full details.
 
+![sample MI ranges box-letter plots](/postestimation/sample_ranges.png)
+
 ## :house: What's RASMI?
 
 The Regional Assessment of buildings’ Material Intensities (RASMI) is a dataset and accompanying method that provides comprehensive and consistent representative MI value ranges. Value ranges embody the inherent variability that exists in buildings. 
@@ -20,7 +22,7 @@ Each datapoint is a range of values that represent one of the unique combination
 
 For instance, the range of material intensities of *concrete* `[material]` in *steel frame structures* `[structure type]` used for *multifamily housing* `[function type]` in *Japan* `[region]` is estimated to be 160 kg/m<sup>2</sup> - 729 kg/m<sup>2</sup> (in the 20230905 version of the data).
 
-## :office: Motivation
+## :hospital: Motivation
 
 The construction materials used in buildings have significant environmental impacts and implications for global material flows and emissions. Material Intensity (MI) is a metric that measures the mass of construction materials per unit of floor area in a building, and is used to model buildings’ materials and assess their resource use and environmental performance. However, the availability and quality of MI data is inconsistent, incomparable, and limited, especially for regions in the Global South. 
 The dataset is reproducible, traceable, and updatable, using synthetic data when required. It can be used for estimating historical and future material flows and emissions, assessing demolition waste and at-risk stocks, and evaluating urban mining potentials.
@@ -33,7 +35,7 @@ is in MI_results\
 ### Versioning
 Versions are marked by the (date) in the filename.
 
-## :hospital: Descriptions of main files in the repository
+## :office: Descriptions of main files in the repository
 <details>
 <summary>Expand to view</summary>
 
