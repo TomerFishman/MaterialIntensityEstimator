@@ -53,10 +53,10 @@ Versions are marked by the (date) in the filename.
 Refer to the Data Descriptor article for details.
 </details>
 
-## :memo: How to cite
+## :speech_balloon: How to cite
 Please cite both the Data Descriptor and the specific data version used:
 
-**Data Descriptor:** Tomer Fishman, Alessio Mastrucci, Yoav Peled, Shoshanna Saxe, Bas van Ruijven (2023) Global ranges of building material intensities differentiated by region, structure, and function: the RASMI dataset *In review*
+**Data Descriptor:** Tomer Fishman, Alessio Mastrucci, Yoav Peled, Shoshanna Saxe, Bas van Ruijven. ***RASMI: Global Ranges of Building Material Intensities Differentiated by Region, Structure, and Function***. Scientific Data 2024, 11 (1), 418. https://doi.org/10.1038/s41597-024-03190-7.
 
 **Data version:** preferably use the DOI of the Zeonodo release, e.g. [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10124952.svg)](https://doi.org/10.5281/zenodo.10124952) Refer to the release number (on the right)
 
@@ -64,3 +64,8 @@ Cite all versions? You can cite all versions by using the DOI 10.5281/zenodo.101
 
 ## :e-mail: Contact
 Tomer Fishman t.fishman@cml.leidenuniv.nl
+
+## :memo: Acknowledgements
+
+This work was conducted with support by the IIASA-Israel program, and by the Israel Science Foundation project RUSTY (grant no. 2706/19). Funding was also provided by the Horizon Europe research and innovation programme under grant agreement no. 101056868 (CIRCOMOD) for TF and grant agreement No 101056810 (CircEUlar) for AM. Opinions are those of the authors only and do not necessarily reflect those of the European Union. Neither the European Union nor the granting authority can be held responsible for this. BvR and AM have been supported by the Energy Demand changes Induced by Technological and Social innovations (EDITS) project, which is an initiative coordinated by the Research Institute of Innovative Technology for the Earth (RITE) and the International Institute for Applied Systems Analysis (IIASA), and funded by the Ministry of Economy, Trade, and Industry (METI), Japan. SS was supported by the Canada Research Chair in Sustainable Infrastructure, Grant Number: 232970.
+
