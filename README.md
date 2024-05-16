@@ -4,7 +4,7 @@ A framework to estimate ranges of buildings' material intensities (kg/m<sup>2</s
 
 RASMI aims to answer the question ***which MI data are appropriate for my country/region of interest?***
 
-Please refer to the Data Descriptor article for full details.
+Please refer to the Data Descriptor article for full details, see "how to cite" below.
 
 ![sample MI ranges box-letter plots](/postestimation/sample_ranges.png)
 
@@ -50,13 +50,13 @@ Versions are marked by the (date) in the filename.
 |postestimation\ |various files |outputs of the postestimation code in MI_estimator.py |
 |tests\ | various folders and files |outputs of the tests of cross validation and effects of the pool size on the MI results |
 
-Refer to the Data Descriptor article for details.
+Refer to the Data Descriptor article for details, see "how to cite" below.
 </details>
 
 ## :speech_balloon: How to cite
-Please cite both the Data Descriptor and the specific data version used:
+Please cite both the Data Descriptor journal article and the specific data version used:
 
-**Data Descriptor:** Tomer Fishman, Alessio Mastrucci, Yoav Peled, Shoshanna Saxe, Bas van Ruijven. ***RASMI: Global Ranges of Building Material Intensities Differentiated by Region, Structure, and Function***. Scientific Data 2024, 11 (1), 418. https://doi.org/10.1038/s41597-024-03190-7.
+**Data Descriptor article:** Tomer Fishman, Alessio Mastrucci, Yoav Peled, Shoshanna Saxe, Bas van Ruijven. ***RASMI: Global Ranges of Building Material Intensities Differentiated by Region, Structure, and Function***. Scientific Data 2024, 11 (1), 418. https://doi.org/10.1038/s41597-024-03190-7.
 
 **Data version:** preferably use the DOI of the Zeonodo release, e.g. [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10124952.svg)](https://doi.org/10.5281/zenodo.10124952) Refer to the release number (on the right)
 
