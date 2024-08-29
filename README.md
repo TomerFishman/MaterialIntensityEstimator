@@ -20,7 +20,11 @@ RASMI consists of 3072 MI ranges for:
 
 Each datapoint is a range of values that represent one of the unique combinations of these dimensions. This yields 8 x 4 x 3 x 32 = 3072 MI ranges.
 
-For instance, the range of material intensities of *concrete* `[material]` in *steel frame structures* `[structure type]` used for *multifamily housing* `[function type]` in *Japan* `[region]` is estimated to be 160 kg/m<sup>2</sup> - 729 kg/m<sup>2</sup> (in the 20230905 version of the data).
+### Simple example
+The table below shows how to use RASMI to estimate the expected range of total mass of `[materials]` stocked in a 120m<sup>2</sup> *single-family house* `[function type]` with a *reinforced concrete structure* `[structure type]` in *Brazil* `[region]`:
+
+![mi_table](https://github.com/user-attachments/assets/7b6ed3e7-98c6-4df5-8323-ada1d0806619)
+(This uses the 20230905 version of the data).
 
 ## :hospital: Motivation
 
